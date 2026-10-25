@@ -1,0 +1,1171 @@
+/* =====================================================================
+   Contacta — app de proveedores de Bosch Pascual, RECOP y Munné
+   Vanilla JS + Supabase. Un solo archivo para que sea fácil de mantener
+   desde la web de GitHub.
+   ===================================================================== */
+(function () {
+  'use strict';
+
+  const CFG = window.CONTACTA_CONFIG;
+  const IMG = window.IMG;
+  const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+  const APP_URL = location.origin + location.pathname.replace(/index\.html$/, '');
+  const CLAVE_DATOS = 'contacta-datos-v1';
+  const CLAVE_VISTA = 'contacta-vista-en';
+  const UNA_HORA = 60 * 60 * 1000;
+  const DIAS_PAPELERA = 30;
+  const $app = document.getElementById('app');
+
+  /* ---------------- Utilidades ---------------- */
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const norm = (s) => String(s || '').toLowerCase().replace(/l·l/g, 'll').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9ñ@.+]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const partes = (s) => String(s || '').split(/;/).map((x) => x.trim()).filter(Boolean);
+  const digitos = (s) => String(s || '').replace(/\D/g, '');
+  const tel9 = (s) => { let d = digitos(s); if (d.startsWith('0034')) d = d.slice(4); else if (d.startsWith('34') && d.length === 11) d = d.slice(2); return d; };
+  const telBonito = (s) => { const d = tel9(s); return d.length === 9 ? `+34 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : String(s || '').trim(); };
+  const telLink = (s) => { const d = tel9(s); return d.length === 9 ? '+34' + d : digitos(s); };
+  const hace = (iso) => {
+    const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (m < 1) return 'ahora'; if (m < 60) return `hace ${m} min`;
+    const h = Math.round(m / 60); if (h < 24) return `hace ${h} h`;
+    const d = Math.round(h / 24); if (d < 31) return `hace ${d} día${d === 1 ? '' : 's'}`;
+    return new Date(iso).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+  };
+  const fecha = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+  const ancho = () => window.matchMedia('(min-width: 960px)').matches;
+  const enLinea = () => navigator.onLine !== false;
+
+  /* ---------------- Iconos ---------------- */
+  const P = {
+    buscar: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+    mas: '<path d="M12 5v14M5 12h14"/>',
+    x: '<path d="M6 6l12 12M18 6L6 18"/>',
+    atras: '<path d="M15 5l-7 7 7 7"/>',
+    chev: '<path d="M9 6l6 6-6 6"/>',
+    tel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/>',
+    copiar: '<path d="M9 9h11v11H9zM5 15V5a2 2 0 012-2h10"/>',
+    ok: '<path d="M5 12l5 5 9-10"/>',
+    wa: '<path d="M4 20l1.3-3.9A8 8 0 1112 20a8 8 0 01-4.1-1.1z"/>',
+    correo: '<path d="M3 5h18v14H3zM3 6l9 7 9-7"/>',
+    contacto: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0M19 3v6M16 6h6"/>',
+    compartir: '<path d="M12 3v12M7 8l5-5 5 5M5 13v7h14v-7"/>',
+    papelera: '<path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/>',
+    ajustes: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+    web: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/>',
+    salir: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
+    pegar: '<path d="M9 4h6v3H9zM7 5H5v16h14V5h-2M8 12h8M8 16h5"/>',
+    camara: '<path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="4"/>',
+    restaurar: '<path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v4h4"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>'
+  };
+  const ico = (n, sz = 20, color = 'currentColor', w = 2) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+  const estrella = (fill, sz = 13) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="${fill}" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>`;
+  const estrellas = (n, sz = 13) => `<span class="estrellas" aria-label="${n} de 5 estrellas">${[1, 2, 3, 4, 5].map((k) => estrella(k <= n ? '#E8A317' : '#E6E1DC', sz)).join('')}</span>`;
+  const ICO_FAM = {
+    'Demoliciones y movimiento de tierras': 'M14 6l4 4M4 20l10-10M12 4l8 8',
+    'Cimentaciones y contenciones': 'M3 20h18M6 20V10M12 20V6M18 20V12M4 10h4M10 6h4M16 12h4',
+    'Estructuras': 'M4 21V8l8-5 8 5v13M4 13h16M9 21v-8M15 21v-8',
+    'Cubiertas e impermeabilización': 'M3 12a9 9 0 0118 0zM12 12v7a2 2 0 01-4 0',
+    'Fachadas': 'M4 21V3h16v18M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2',
+    'Carpinterías y cerrajería': 'M4 3h16v18H4zM12 3v18M4 12h16',
+    'Vidrio, lucernarios y protección solar': 'M5 3h14v18H5zM9 7l-2 2M14 7l-5 5',
+    'Albañilería, tabiquería y revocos': 'M3 6h18v12H3zM3 12h18M9 6v6M15 12v6',
+    'Pavimentos y revestimientos': 'M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z',
+    'Instalaciones': 'M13 2L4 14h7l-1 8 9-12h-7z',
+    'Equipamiento y mobiliario': 'M4 10h16v6H4zM6 16v4M18 16v4M6 10V6h12v4',
+    'Urbanización, jardinería y exteriores': 'M12 22V12M12 12c-4 0-7-3-7-7 4 0 7 3 7 7zM12 12c0-4 3-7 7-7 0 4-3 7-7 7',
+    'Medios auxiliares y alquileres': 'M6 21V3M6 3h12l-4 4M6 9h8M4 21h8',
+    'Materiales y suministros': 'M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10',
+    'Servicios técnicos y control': 'M4 20h16M7 20V10l5-6 5 6v10M10 14h4',
+    'Seguridad, limpieza y residuos': 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'
+  };
+  const icoFam = (famNombre, sz = 20, color = 'currentColor') => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICO_FAM[famNombre] || 'M4 4h16v16H4z'}"/></svg>`;
+
+  /* ---------------- Avisos y hojas ---------------- */
+  let tAviso;
+  function aviso(txt, conOk = true) {
+    const el = document.getElementById('aviso');
+    el.innerHTML = (conOk ? ico('ok', 16, '#fff', 2.6) : '') + `<span>${esc(txt)}</span>`;
+    el.hidden = false; clearTimeout(tAviso);
+    tAviso = setTimeout(() => { el.hidden = true; }, 2200);
+  }
+  const capa = document.getElementById('hoja-capa');
+  function abrirHoja(html, alMontar) {
+    capa.innerHTML = `<div class="hoja" role="dialog" aria-modal="true">${html}</div>`;
+    capa.hidden = false;
+    capa.onclick = (e) => { if (e.target === capa) cerrarHoja(); };
+    if (alMontar) alMontar(capa.firstElementChild);
+    const f = capa.querySelector('[autofocus]'); if (f) setTimeout(() => f.focus(), 50);
+  }
+  function cerrarHoja() { capa.hidden = true; capa.innerHTML = ''; }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !capa.hidden) cerrarHoja(); });
+  function confirmar(titulo, texto, botonTxt, peligro) {
+    return new Promise((res) => {
+      abrirHoja(`<div class="hoja-asa"></div>
+        <div style="padding:8px 20px 0"><div class="hoja-titulo" style="text-align:left;font-size:20px">${esc(titulo)}</div></div>
+        <p>${texto}</p>
+        <div style="display:flex;gap:8px;padding:8px 20px 0">
+          <button class="btn-blanco" data-r="0">Cancelar</button>
+          <button class="btn-lleno ancho" data-r="1" style="${peligro ? 'background:#B4151B' : ''}">${esc(botonTxt)}</button>
+        </div>`, (h) => {
+        h.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => { cerrarHoja(); res(b.dataset.r === '1'); });
+      });
+      capa.onclick = (e) => { if (e.target === capa) { cerrarHoja(); res(false); } };
+    });
+  }
+
+  /* ---------------- Portapapeles ---------------- */
+  async function copiarTexto(txt, html) {
+    try {
+      if (html && window.ClipboardItem && navigator.clipboard.write) {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/plain': new Blob([txt], { type: 'text/plain' }),
+          'text/html': new Blob([html], { type: 'text/html' })
+        })]);
+      } else {
+        await navigator.clipboard.writeText(txt);
+      }
+      return true;
+    } catch (e) {
+      const t = document.createElement('textarea'); t.value = txt; t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (_) {}
+      t.remove(); return ok;
+    }
+  }
+  function marcarCopiado(btn, conTexto) {
+    if (!btn) return;
+    btn.classList.add('ok');
+    const antes = btn.innerHTML;
+    btn.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + (conTexto ? '<span>Copiado</span>' : '');
+    setTimeout(() => { btn.classList.remove('ok'); btn.innerHTML = antes; }, 1500);
+  }
+  // Columnas de la plantilla de comparativo: EMPRESA · PERSONA · E-MAIL · TELÈFON · POBLACIÓ
+  function filaComparativo(p) {
+    const telf = partes(p.moviles)[0] || partes(p.fijos)[0] || '';
+    return [p.nombre, p.personas || '', partes(p.emails)[0] || '', telf, p.poblacion || ''];
+  }
+  function copiarProveedores(lista) {
+    const filas = lista.map(filaComparativo);
+    const txt = filas.map((f) => f.map((c) => String(c).replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
+    const html = '<table>' + filas.map((f) => '<tr>' + f.map((c) => `<td>${esc(c)}</td>`).join('') + '</tr>').join('') + '</table>';
+    return copiarTexto(txt, html);
+  }
+
+  /* ---------------- Datos ---------------- */
+  const D = { familias: [], oficios: [], prov: [], links: [], vals: [], usuarios: [], cargado: false, desde: null };
+  let IDX = null; // índices derivados
+  let yo = null; // fila de usuarios del usuario actual
+
+  async function leerTodo(tabla, columnas = '*', orden = 'id') {
+    const out = []; const N = 1000;
+    for (let i = 0; ; i += N) {
+      const { data, error } = await sb.from(tabla).select(columnas).order(orden, { ascending: true }).range(i, i + N - 1);
+      if (error) throw error;
+      out.push(...data); if (data.length < N) break;
+    }
+    return out;
+  }
+  async function cargarDatos() {
+    const [familias, oficios, prov, links, vals, usuarios] = await Promise.all([
+      leerTodo('familias'), leerTodo('oficios'), leerTodo('proveedores'),
+      leerTodo('proveedor_oficios', 'proveedor_id,oficio_id', 'proveedor_id'),
+      leerTodo('valoraciones'), leerTodo('usuarios', 'id,email,nombre,empresa,rol,bloqueado,created_at')
+    ]);
+    Object.assign(D, { familias, oficios, prov, links, vals, usuarios, cargado: true, desde: new Date().toISOString() });
+    try { localStorage.setItem(CLAVE_DATOS, JSON.stringify(D)); } catch (_) {}
+    indexar();
+  }
+  function cargarCache() {
+    try {
+      const c = JSON.parse(localStorage.getItem(CLAVE_DATOS) || 'null');
+      if (c && c.prov) { Object.assign(D, c); indexar(); return true; }
+    } catch (_) {}
+    return false;
+  }
+  const refrescar = debounce(async () => {
+    try { await cargarDatos(); pintar(); } catch (e) { console.warn(e); }
+  }, 150);
+
+  const VACIAS = new Set(['sl', 's', 'l', 'sa', 'slu', 'sau', 'scp', 'cb', 'sll', 'y', 'i', 'de', 'del', 'la', 'el', 'les', 'los', 'las', 'd', 'e']);
+  const palabras = (s) => norm(s).split(' ').filter((w) => w && !VACIAS.has(w));
+
+  function indexar() {
+    const fam = new Map(D.familias.map((f) => [f.id, f]));
+    const of = new Map(D.oficios.map((o) => [o.id, o]));
+    const usu = new Map(D.usuarios.map((u) => [u.id, u]));
+    const ofsDe = new Map(); D.links.forEach((l) => { if (!ofsDe.has(l.proveedor_id)) ofsDe.set(l.proveedor_id, []); ofsDe.get(l.proveedor_id).push(l.oficio_id); });
+    const valsDe = new Map(); D.vals.forEach((v) => { if (!valsDe.has(v.proveedor_id)) valsDe.set(v.proveedor_id, []); valsDe.get(v.proveedor_id).push(v); });
+    const porId = new Map();
+    D.prov.forEach((p) => {
+      const ofs = (ofsDe.get(p.id) || []).map((id) => of.get(id)).filter(Boolean);
+      const vs = (valsDe.get(p.id) || []).sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
+      const media = vs.length ? vs.reduce((s, v) => s + v.estrellas, 0) / vs.length : 0;
+      const famP = ofs.length ? fam.get(ofs[0].familia_id) : null;
+      p._ofs = ofs; p._vals = vs; p._media = media; p._n = vs.length; p._trab = vs.length > 0;
+      p._fam = famP ? famP.nombre : '';
+      p._wNombre = palabras(p.nombre);
+      p._wOf = palabras(ofs.map((o) => o.nombre + ' ' + (o.sinonimos || []).join(' ')).join(' '));
+      p._wResto = palabras([p.personas, p.emails, p.web, p.poblacion, p.provincia, p.notas, p.cif, p.recomendado_por, vs.map((v) => v.obra || '').join(' ')].join(' '));
+      p._tels = [...partes(p.moviles), ...partes(p.fijos)].map(tel9);
+      porId.set(p.id, p);
+    });
+    IDX = { fam, of, usu, porId };
+    yo = sesion ? usu.get(sesion.user.id) || yo : null;
+  }
+  const esAdmin = () => yo && yo.rol === 'admin' && !yo.bloqueado;
+  const nombreUsuario = (id, texto) => (id && IDX && IDX.usu.get(id) ? IDX.usu.get(id).nombre : (texto || 'alguien'));
+  const vivos = () => D.prov.filter((p) => !p.eliminado_en);
+  const oficiosVivos = () => D.oficios.filter((o) => !o.redirige_a);
+
+  /* ---------------- Búsqueda tolerante ---------------- */
+  function lev(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i]; let minFila = i;
+      for (let j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (cur[j] < minFila) minFila = cur[j];
+      }
+      if (minFila > max) return max + 1;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  function puntuaToken(t, ws) {
+    let best = 0;
+    const max = t.length >= 7 ? 2 : t.length >= 4 ? 1 : 0;
+    for (const w of ws) {
+      if (w === t) return 4;
+      if (w.startsWith(t)) { best = Math.max(best, 3); continue; }
+      if (t.length >= 3 && w.includes(t)) { best = Math.max(best, 2); continue; }
+      if (max && w[0] === t[0]) {
+        const d = Math.min(lev(t, w, max), w.length > t.length ? lev(t, w.slice(0, t.length), max) : max + 1);
+        if (d <= max) best = Math.max(best, 1.5);
+      }
+    }
+    return best;
+  }
+  function buscar(q, lista) {
+    const toks = palabras(q); const dq = digitos(q);
+    if (!toks.length && dq.length < 3) return [];
+    const out = [];
+    for (const p of lista) {
+      let total = 0; let ok = true;
+      if (dq.length >= 3 && toks.every((t) => /^\d+$/.test(t))) {
+        if (p._tels.some((t) => t.includes(dq))) out.push({ p, s: 10 });
+        continue;
+      }
+      for (const t of toks) {
+        const s = Math.max(puntuaToken(t, p._wNombre) * 3, puntuaToken(t, p._wOf) * 2, puntuaToken(t, p._wResto));
+        if (!s) { ok = false; break; }
+        total += s;
+      }
+      if (ok) out.push({ p, s: total + (p._trab ? 0.5 : 0) + p._media * 0.05 });
+    }
+    return out.sort((a, b) => b.s - a.s || a.p.nombre.localeCompare(b.p.nombre)).map((x) => x.p);
+  }
+
+  /* ---------------- Sesión ---------------- */
+  let sesion = null;
+  async function iniciar() {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    portadaSiToca();
+    const { data } = await sb.auth.getSession();
+    sesion = data.session;
+    sb.auth.onAuthStateChange((ev, s) => {
+      sesion = s;
+      if (ev === 'PASSWORD_RECOVERY') { hojaNuevaContrasena(); return; }
+      if (ev === 'SIGNED_OUT') { D.cargado = false; try { localStorage.removeItem(CLAVE_DATOS); } catch (_) {} pintar(); }
+      if (ev === 'SIGNED_IN' && !D.cargado) arrancarDatos();
+    });
+    if (sesion) arrancarDatos(); else pintar();
+    window.addEventListener('hashchange', pintar);
+    window.addEventListener('online', () => { pintar(); refrescar(); });
+    window.addEventListener('offline', pintar);
+    let anchoPrev = ancho();
+    window.addEventListener('resize', debounce(() => { if (ancho() !== anchoPrev) { anchoPrev = ancho(); listaMontada = false; pintar(); } }, 200));
+  }
+  async function arrancarDatos() {
+    const conCache = cargarCache();
+    if (conCache) pintar(); else $app.innerHTML = `<div class="vacio" style="min-height:60vh;justify-content:center"><p>Cargando proveedores…</p></div>`;
+    if (!enLinea()) { if (!conCache) $app.innerHTML = `<div class="vacio"><h2>Sin conexión</h2><p>La primera vez hace falta conexión para descargar los proveedores.</p></div>`; return; }
+    try { await cargarDatos(); } catch (e) {
+      console.warn(e);
+      if (!conCache) { $app.innerHTML = `<div class="vacio"><h2>No se han podido cargar los datos</h2><p>${esc(e.message || e)}</p><button class="btn-lleno" onclick="location.reload()">Reintentar</button></div>`; return; }
+    }
+    if (yo && yo.bloqueado) { await sb.auth.signOut(); aviso('Tu cuenta está bloqueada. Habla con el administrador.', false); return; }
+    pintar();
+  }
+
+  /* ---------------- Portada animada ---------------- */
+  function portadaSiToca() {
+    let ultima = 0;
+    try { ultima = parseInt(localStorage.getItem(CLAVE_VISTA) || '0', 10) || 0; localStorage.setItem(CLAVE_VISTA + '-t', '1'); } catch (_) { return; }
+    const apuntar = () => { try { localStorage.setItem(CLAVE_VISTA, String(Date.now())); } catch (_) {} };
+    if (!ultima || Date.now() - ultima > UNA_HORA) mostrarPortada(apuntar); else apuntar();
+    let oculta = null;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') { oculta = Date.now(); apuntar(); }
+      else if (oculta && Date.now() - oculta > UNA_HORA) { oculta = null; mostrarPortada(apuntar); }
+    });
+    setInterval(() => { if (document.visibilityState === 'visible') apuntar(); }, 5 * 60 * 1000);
+  }
+  function mostrarPortada(apuntar) {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const el = document.getElementById('portada');
+    const N = 12; let rayas = '';
+    for (let i = 0; i < N; i++) {
+      const r = (0.3 + (i % 3) * 0.1 + Math.abs(i - N / 2) * 0.012).toFixed(3);
+      rayas += `<div class="p-raya" style="top:${i * 100 / N}%;height:calc(${100 / N}% + 1px);transform-origin:${i % 2 ? 'top' : 'bottom'};animation-delay:${r}s"></div>`;
+    }
+    el.className = ''; el.hidden = false;
+    el.innerHTML = `<div class="p-fondo"></div><div>${rayas}</div>
+      <div class="p-centro"><div class="p-logos">
+        <img class="p-logo" src="${IMG.bp}" alt="" style="height:58px;animation-delay:.85s">
+        <img class="p-logo" src="${IMG.recop}" alt="" style="height:46px;animation-delay:1.05s">
+        <img class="p-logo" src="${IMG.munne}" alt="" style="height:40px;animation-delay:1.25s">
+      </div><div><div class="p-marco"><span class="p-palabra">Contacta</span></div><div class="p-linea"></div></div></div>`;
+    let fin = false;
+    const terminar = () => { if (fin) return; fin = true; apuntar(); el.classList.add('fuera'); setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 400); };
+    el.onclick = terminar; setTimeout(terminar, 2800); setTimeout(() => { el.hidden = true; }, 5000);
+  }
+
+  /* ---------------- Pantalla de acceso ---------------- */
+  let modoAcceso = 'entrar';
+  function pintarAcceso() {
+    listaMontada = false;
+    const titulos = { entrar: 'Entrar', registro: 'Crear cuenta', olvido: 'Recuperar contraseña' };
+    $app.innerHTML = `<main class="acceso">
+      <div class="acceso-logos">
+        <img src="${IMG.bp}" alt="Bosch Pascual" style="height:48px">
+        <img src="${IMG.recop}" alt="RECOP" style="height:40px">
+        <img src="${IMG.munne}" alt="Munné" style="height:34px">
+      </div>
+      <div style="text-align:center"><h1 class="titulo">Contacta</h1><div style="color:var(--sec);margin-top:6px">Proveedores de Bosch Pascual, RECOP y Munné</div></div>
+      <form class="acceso-caja" id="f-acceso" novalidate>
+        <div class="form-grupo">
+          <div class="campo"><label for="a-email" class="oculto-vis">Correo de empresa</label><input id="a-email" type="email" autocomplete="username" placeholder="nombre@boschpascual.com" required></div>
+          ${modoAcceso !== 'olvido' ? `<div class="campo"><label for="a-pass" class="oculto-vis">Contraseña</label><input id="a-pass" type="password" autocomplete="${modoAcceso === 'registro' ? 'new-password' : 'current-password'}" placeholder="Contraseña${modoAcceso === 'registro' ? ' (mínimo 8 caracteres)' : ''}" required></div>` : ''}
+        </div>
+        <div id="a-error" class="error-txt" style="padding:0 4px" hidden></div>
+        <button class="btn-lleno ancho" type="submit">${titulos[modoAcceso]}</button>
+        ${modoAcceso === 'entrar' ? `<button type="button" class="enlace" data-m="registro">¿Es tu primera vez? Crear cuenta</button><button type="button" class="enlace" data-m="olvido">He olvidado la contraseña</button>` : `<button type="button" class="enlace" data-m="entrar">Ya tengo cuenta: entrar</button>`}
+        <div class="ayuda" style="padding:4px;text-align:center">Solo con correo @boschpascual.com, @recop.net o @cmunne.com.</div>
+      </form></main>`;
+    $app.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => { modoAcceso = b.dataset.m; pintarAcceso(); });
+    const err = (t) => { const e = document.getElementById('a-error'); e.textContent = t; e.hidden = !t; };
+    document.getElementById('f-acceso').onsubmit = async (ev) => {
+      ev.preventDefault(); err('');
+      const email = document.getElementById('a-email').value.trim().toLowerCase();
+      const pass = (document.getElementById('a-pass') || {}).value || '';
+      if (!CFG.dominios.includes(email.split('@')[1] || '')) return err('Usa tu correo de empresa: @boschpascual.com, @recop.net o @cmunne.com.');
+      const btn = ev.submitter || ev.target.querySelector('[type=submit]'); btn.disabled = true;
+      try {
+        if (modoAcceso === 'entrar') {
+          const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+          if (error) throw new Error(/confirm/i.test(error.message) ? 'Aún no has confirmado tu correo. Busca el mensaje de confirmación en tu bandeja de entrada.' : 'Correo o contraseña incorrectos.');
+        } else if (modoAcceso === 'registro') {
+          if (pass.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
+          const { data, error } = await sb.auth.signUp({ email, password: pass, options: { emailRedirectTo: APP_URL } });
+          if (error) throw new Error(/already|registered/i.test(error.message) ? 'Ese correo ya tiene cuenta. Entra o recupera la contraseña.' : /rate|limit/i.test(error.message) ? 'Se han enviado demasiados correos. Prueba dentro de un rato.' : 'No se ha podido crear la cuenta: ' + error.message);
+          if (!data.session) { modoAcceso = 'entrar'; pintarAcceso(); aviso('Te hemos enviado un correo para confirmar la cuenta'); }
+        } else {
+          const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: APP_URL });
+          if (error) throw new Error('No se ha podido enviar el correo: ' + error.message);
+          modoAcceso = 'entrar'; pintarAcceso(); aviso('Te hemos enviado un correo para cambiar la contraseña');
+        }
+      } catch (e) { err(e.message); btn.disabled = false; }
+    };
+  }
+  function hojaNuevaContrasena() {
+    abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><span></span><div class="hoja-titulo">Nueva contraseña</div><span></span></div>
+      <form id="f-np" style="padding:12px 0 0"><div class="form-grupo"><div class="campo"><label for="np">Contraseña</label><input id="np" type="password" autocomplete="new-password" minlength="8" placeholder="Mínimo 8" autofocus></div></div>
+      <div style="padding:14px 20px 0"><button class="btn-lleno ancho">Guardar</button></div></form>`, (h) => {
+      h.querySelector('#f-np').onsubmit = async (e) => {
+        e.preventDefault(); const v = h.querySelector('#np').value;
+        if (v.length < 8) return aviso('Mínimo 8 caracteres', false);
+        const { error } = await sb.auth.updateUser({ password: v });
+        if (error) return aviso(error.message, false);
+        cerrarHoja(); aviso('Contraseña cambiada');
+      };
+    });
+  }
+
+  /* ---------------- Enrutado ---------------- */
+  const ruta = () => (location.hash.replace(/^#\/?/, '') || '').split('/');
+  const ir = (h) => { location.hash = h; };
+  let listaMontada = false;
+
+  function pintar() {
+    if (!sesion) return pintarAcceso();
+    if (!D.cargado) return;
+    const [r, id] = ruta();
+    if (r === 'p' && id) {
+      const p = IDX.porId.get(Number(id));
+      if (ancho()) {
+        if (!listaMontada || !document.querySelector('.marco.con-detalle')) {
+          $app.innerHTML = `<div class="marco con-detalle"><div class="panel-lista" id="pl"></div><div class="panel-detalle" id="pd"></div></div>`;
+          pintarBuscador(document.getElementById('pl')); listaMontada = true;
+        } else marcarActiva();
+        pintarFicha(document.getElementById('pd'), p);
+      } else { listaMontada = false; $app.innerHTML = `<div class="pantalla" id="pd"></div>`; pintarFicha(document.getElementById('pd'), p); window.scrollTo(0, 0); }
+      return;
+    }
+    listaMontada = false;
+    if (r === 'alta') return pantallaSimple((el) => pintarFormulario(el, null));
+    if (r === 'editar' && id) return pantallaSimple((el) => pintarFormulario(el, IDX.porId.get(Number(id))));
+    if (r === 'papelera') return pantallaSimple(pintarPapelera);
+    if (r === 'admin' && esAdmin()) return pantallaSimple(pintarAdmin);
+    if (r === 'cuenta') return pantallaSimple(pintarCuenta);
+    if (ancho()) {
+      $app.innerHTML = `<div class="marco con-detalle"><div class="panel-lista" id="pl"></div><div class="panel-detalle" id="pd"></div></div>`;
+      pintarBuscador(document.getElementById('pl')); listaMontada = true;
+      document.getElementById('pd').innerHTML = `<div class="vacio" style="min-height:70vh;justify-content:center">${ico('contacto', 40, '#B5ADA6', 1.4)}<p>Elige un proveedor para ver su ficha.</p></div>`;
+    } else { $app.innerHTML = `<div class="marco"><div class="panel-lista" id="pl"></div></div>`; pintarBuscador(document.getElementById('pl')); }
+  }
+  function pantallaSimple(fn) { $app.innerHTML = `<div class="pantalla" id="ps"></div>`; fn(document.getElementById('ps')); window.scrollTo(0, 0); }
+  function marcarActiva() {
+    const [, id] = ruta();
+    document.querySelectorAll('.fila').forEach((f) => f.classList.toggle('activa', f.dataset.id === id));
+  }
+
+  /* ---------------- Buscador ---------------- */
+  const E = { q: '', nivel: 'fam', fam: 0, of: 0, soloTrab: false, verInact: false, limite: 60 };
+  function familiasOrden() { return D.familias.slice().sort((a, b) => a.orden - b.orden); }
+  function oficiosDeFam(famId) { return oficiosVivos().filter((o) => o.familia_id === famId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')); }
+
+  function pintarBuscador(el) {
+    const offline = !enLinea();
+    el.innerHTML = `
+      <header class="cabecera">
+        <div class="cab-fila">
+          <div class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:12px"><img src="${IMG.recop}" alt="RECOP" style="height:18px"><img src="${IMG.munne}" alt="Munné" style="height:15px"></div>
+          <div style="display:flex;gap:4px">
+            ${esAdmin() ? `<a class="btn-redondo" href="#/admin" aria-label="Administración">${ico('ajustes', 20, '#736A63', 1.8)}</a>` : `<a class="btn-redondo" href="#/cuenta" aria-label="Mi cuenta">${ico('salir', 20, '#736A63', 1.8)}</a>`}
+            <a class="btn-redondo" href="#/papelera" aria-label="Papelera">${ico('papelera', 20, '#736A63', 1.8)}</a>
+            <a class="btn-redondo gris" href="#/alta" aria-label="Añadir proveedor">${ico('mas', 20, '#575049', 2.2)}</a>
+          </div>
+        </div>
+        <h1 class="titulo">Contacta</h1>
+        <div class="buscador">
+          <div class="caja-busca">${ico('buscar', 17, '#736A63', 2.2)}
+            <label for="q" class="oculto-vis">Buscar</label>
+            <input id="q" type="text" placeholder="Nombre, oficio, obra, teléfono…" autocomplete="off" enterkeyhint="search" value="${esc(E.q)}">
+            <button class="borrar-busca" id="q-x" aria-label="Borrar búsqueda" ${E.q ? '' : 'hidden'}>${ico('x', 12, '#fff', 3)}</button>
+          </div>
+        </div>
+      </header>
+      <div class="filtros">
+        <button class="chip ${E.soloTrab ? 'on' : ''}" id="f-trab" aria-pressed="${E.soloTrab}">Trabajado con nosotros</button>
+        <button class="chip ${E.verInact ? 'on' : ''}" id="f-inact" aria-pressed="${E.verInact}">Ver cerrados</button>
+      </div>
+      ${offline ? `<div class="aviso-offline">Sin conexión: estás viendo los datos guardados. Para añadir o editar hace falta conexión.</div>` : ''}
+      <div id="zona-rueda"></div>
+      <div id="resultados" style="flex:1"></div>`;
+    const inp = el.querySelector('#q');
+    const xb = el.querySelector('#q-x');
+    const alEscribir = debounce(() => { E.q = inp.value; E.limite = 60; xb.hidden = !E.q; pintarZonaRueda(); pintarResultados(); }, 120);
+    inp.oninput = alEscribir;
+    inp.onkeydown = (e) => { if (e.key === 'Escape') { inp.value = ''; alEscribir(); } };
+    xb.onclick = () => { inp.value = ''; E.q = ''; xb.hidden = true; pintarZonaRueda(); pintarResultados(); inp.focus(); };
+    el.querySelector('#f-trab').onclick = (e) => { E.soloTrab = !E.soloTrab; e.currentTarget.classList.toggle('on', E.soloTrab); e.currentTarget.setAttribute('aria-pressed', E.soloTrab); pintarResultados(); };
+    el.querySelector('#f-inact').onclick = (e) => { E.verInact = !E.verInact; e.currentTarget.classList.toggle('on', E.verInact); e.currentTarget.setAttribute('aria-pressed', E.verInact); pintarResultados(); };
+    pintarZonaRueda(); pintarResultados();
+    if (!ancho() && !E.q && !sessionStorage.getItem('contacta-foco')) { sessionStorage.setItem('contacta-foco', '1'); }
+    if (ancho()) setTimeout(() => inp.focus({ preventScroll: true }), 50);
+  }
+
+  function pintarZonaRueda() {
+    const z = document.getElementById('zona-rueda'); if (!z) return;
+    if (E.q.trim()) { z.innerHTML = ''; return; }
+    const fams = familiasOrden(); if (!fams.length) { z.innerHTML = ''; return; }
+    E.fam = Math.min(E.fam, fams.length - 1);
+    const f = fams[E.fam];
+    if (E.nivel === 'fam') {
+      z.innerHTML = `<div class="rueda-cab"><span class="etiqueta-sec">Familias · ${fams.length}</span><span style="font-size:13px;color:var(--sec)">Toca la del centro para ver sus oficios</span></div><div id="rueda"></div>`;
+      montarRueda(z.querySelector('#rueda'), fams.map((x) => ({ label: x.nombre, icon: icoFam(x.nombre, 20, '#575049'), chev: true })), E.fam, true,
+        (i) => { E.fam = i; E.of = 0; pintarResultados(); },
+        (i) => { E.fam = i; E.nivel = 'of'; E.of = 0; pintarZonaRueda(); pintarResultados(); });
+    } else {
+      const ofs = oficiosDeFam(f.id);
+      E.of = Math.min(E.of, Math.max(0, ofs.length - 1));
+      z.innerHTML = `<div class="rueda-cab"><button class="btn-texto fuerte" id="r-atras" style="margin-left:-26px;font-size:15px">${ico('atras', 18, '#575049', 2.2)}Familias</button><span class="etiqueta-sec" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.nombre)}</span></div><div id="rueda"></div>`;
+      z.querySelector('#r-atras').onclick = () => { E.nivel = 'fam'; pintarZonaRueda(); pintarResultados(); };
+      montarRueda(z.querySelector('#rueda'), ofs.map((o) => ({ label: o.nombre, icon: icoFam(f.nombre, 20, '#575049') })), E.of, ofs.length >= 6,
+        (i) => { E.of = i; pintarResultados(); }, null);
+    }
+  }
+
+  // Rueda tipo selector de iPhone: lista con «snap», difuminada arriba y abajo, infinita si loop.
+  function montarRueda(cont, items, sel, loop, alCambiar, alEntrar) {
+    const H = 46; const n = items.length; const rep = loop ? 3 : 1; const base = loop ? n : 0;
+    cont.className = 'rueda';
+    let html = '<div class="rueda-sel"></div><div class="rueda-lista" role="listbox" tabindex="0"><div class="rueda-pad"></div>';
+    for (let r = 0; r < rep; r++) items.forEach((it, i) => { html += `<button class="rueda-item" role="option" data-i="${i}" data-k="${r * n + i}" tabindex="-1"><span class="ico-rueda">${it.icon || ''}</span><span>${esc(it.label)}</span>${it.chev ? `<span class="chev">${ico('chev', 16, '#A39A93', 2.4)}</span>` : ''}</button>`; });
+    html += '<div class="rueda-pad"></div></div>';
+    cont.innerHTML = html;
+    const lista = cont.querySelector('.rueda-lista');
+    const els = [...lista.querySelectorAll('.rueda-item')];
+    let actual = sel; let raf = 0; let tFin;
+    const pintarRot = () => {
+      raf = 0; const c = lista.scrollTop / H;
+      els.forEach((b, k) => {
+        const d = k - c; const a = Math.abs(d);
+        if (a > 5) { b.style.opacity = '0'; return; }
+        b.style.transform = `perspective(500px) rotateX(${(-d * 17).toFixed(1)}deg) scale(${(1 - Math.min(a, 4) * 0.05).toFixed(3)})`;
+        b.style.opacity = String(Math.max(0, 1 - a * 0.22).toFixed(2));
+        b.classList.toggle('sel', a < 0.5); b.setAttribute('aria-selected', a < 0.5);
+      });
+    };
+    const fin = () => {
+      let k = Math.round(lista.scrollTop / H);
+      const i = ((k % n) + n) % n;
+      if (loop && (k < n || k >= 2 * n)) { k = n + i; lista.scrollTop = k * H; pintarRot(); }
+      if (i !== actual) { actual = i; alCambiar(i); }
+    };
+    lista.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(pintarRot); clearTimeout(tFin); tFin = setTimeout(fin, 130); }, { passive: true });
+    lista.scrollTop = (base + sel) * H; pintarRot();
+    lista.addEventListener('click', (e) => {
+      const b = e.target.closest('.rueda-item'); if (!b) return;
+      const k = Number(b.dataset.k); const i = Number(b.dataset.i);
+      if (b.classList.contains('sel')) { if (alEntrar) alEntrar(i); }
+      else lista.scrollTo({ top: k * H, behavior: 'smooth' });
+    });
+    lista.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); lista.scrollBy({ top: e.key === 'ArrowDown' ? H : -H, behavior: 'smooth' }); }
+      if (e.key === 'Enter' && alEntrar) alEntrar(actual);
+    });
+  }
+
+  function listaFiltrada() {
+    let l = D.prov.filter((p) => !p.eliminado_en && (E.verInact || p.estado === 'activo'));
+    if (E.soloTrab) l = l.filter((p) => p._trab);
+    return l;
+  }
+  function pintarResultados() {
+    const z = document.getElementById('resultados'); if (!z) return;
+    const base = listaFiltrada();
+    let grupos = []; let total = 0;
+    if (E.q.trim()) {
+      const res = buscar(E.q, base); total = res.length;
+      const vista = res.slice(0, E.limite);
+      const porOf = new Map();
+      vista.forEach((p) => { const o = p._ofs[0]; const k = o ? o.id : 0; if (!porOf.has(k)) porOf.set(k, { o, items: [] }); porOf.get(k).items.push(p); });
+      grupos = [...porOf.values()].map((g) => ({ titulo: g.o ? g.o.nombre : 'Sin oficio', fam: g.o ? (IDX.fam.get(g.o.familia_id) || {}).nombre : '', items: g.items, todos: g.items }));
+      if (res.length > E.limite) grupos.mas = res.length - E.limite;
+    } else {
+      const fams = familiasOrden(); const f = fams[E.fam]; if (!f) { z.innerHTML = ''; return; }
+      const ofs = E.nivel === 'fam' ? oficiosDeFam(f.id) : [oficiosDeFam(f.id)[E.of]].filter(Boolean);
+      grupos = ofs.map((o) => {
+        const items = base.filter((p) => p._ofs.some((x) => x.id === o.id))
+          .sort((a, b) => (b._trab - a._trab) || (b._media - a._media) || a.nombre.localeCompare(b.nombre, 'es'));
+        return { titulo: o.nombre, fam: f.nombre, items, todos: items };
+      }).filter((g) => g.items.length);
+      total = grupos.reduce((s, g) => s + g.items.length, 0);
+    }
+    if (!grupos.length) {
+      z.innerHTML = E.q.trim()
+        ? `<div class="vacio"><h2>Sin resultados</h2><p>Nadie coincide con «${esc(E.q)}». ¿Lo conoces? Añádelo para el resto del equipo.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`
+        : `<div class="vacio"><p>No hay proveedores en este oficio${E.soloTrab ? ' con los que hayamos trabajado' : ''}.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`;
+      return;
+    }
+    const [, idSel] = ruta();
+    z.innerHTML = grupos.map((g, gi) => `
+      <div class="grupo-cab"><div class="etiqueta-sec">${esc(g.titulo)} · ${g.items.length}</div>
+        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#575049')}<span>Copiar todos</span></button></div>
+      <div class="tarjeta">${g.items.map((p) => filaHTML(p, g.fam, String(p.id) === idSel)).join('')}</div>`).join('')
+      + (grupos.mas ? `<div class="mas"><button class="btn-blanco" id="ver-mas">Ver ${Math.min(grupos.mas, 60)} más (${total} en total)</button></div>` : '')
+      + '<div style="height:24px"></div>';
+    z.querySelectorAll('.copiar-todos').forEach((b) => b.onclick = async () => {
+      const g = grupos[Number(b.dataset.g)];
+      if (await copiarProveedores(g.todos)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#575049') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.todos.length} proveedores copiados. Pégalos en el comparativo.`); }
+    });
+    const vm = z.querySelector('#ver-mas'); if (vm) vm.onclick = () => { E.limite += 60; pintarResultados(); };
+    engancharFilas(z);
+  }
+  function filaHTML(p, famNombre, activa) {
+    const telf = partes(p.moviles)[0] || partes(p.fijos)[0];
+    const lugar = [p.poblacion, p.provincia && p.poblacion && norm(p.provincia) === norm(p.poblacion) ? '' : p.provincia].filter(Boolean).join(', ');
+    return `<div class="fila ${activa ? 'activa' : ''}" data-id="${p.id}">
+      <button class="fila-enlace" data-abrir="${p.id}">
+        <div class="ico-caja">${icoFam(famNombre || p._fam, 20, '#575049')}</div>
+        <div class="fila-txt"><div class="fila-nombre">${esc(p.nombre)}</div>
+          <div class="fila-meta">${p._trab ? `<span class="nota">${estrella('#E8A317')}${p._media.toFixed(1).replace('.', ',')}</span>` : ''}
+            ${p.estado === 'inactivo' ? '<span class="pastilla inact">Cerrado</span>' : p._trab ? '<span class="pastilla trab">Trabajado con nosotros</span>' : '<span class="pastilla ref">Referencia</span>'}
+            ${lugar ? `<span class="lugar">${esc(lugar)}</span>` : ''}</div></div>
+      </button>
+      <button class="btn-circ" data-copiar="${p.id}" aria-label="Copiar ${esc(p.nombre)}">${ico('copiar', 18, '#575049')}</button>
+      <a class="btn-circ rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'} aria-label="Llamar a ${esc(p.nombre)}">${ico('tel', 18, '#fff')}</a>
+    </div>`;
+  }
+  function engancharFilas(z) {
+    z.querySelectorAll('[data-abrir]').forEach((b) => b.onclick = () => ir('#/p/' + b.dataset.abrir));
+    z.querySelectorAll('[data-copiar]').forEach((b) => b.onclick = async () => {
+      const p = IDX.porId.get(Number(b.dataset.copiar));
+      if (await copiarProveedores([p])) marcarCopiado(b, false);
+    });
+  }
+
+  /* ---------------- Ficha ---------------- */
+  const abiertas = new Set();
+  function pintarFicha(el, p) {
+    if (!p || (p.eliminado_en && !esAdmin() && Date.now() - new Date(p.eliminado_en) > DIAS_PAPELERA * 864e5)) {
+      el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#575049', 2.2)}Contacta</a></div><div class="vacio"><h2>Este proveedor no existe</h2><p>Puede que lo hayan eliminado.</p></div>`; return;
+    }
+    const famN = p._fam; const moviles = partes(p.moviles); const fijos = partes(p.fijos); const emails = partes(p.emails);
+    const telf = moviles[0] || fijos[0]; const mia = p._vals.find((v) => sesion && v.usuario_id === sesion.user.id);
+    const datos = [];
+    if (p.personas) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Persona de contacto</span><span class="v">${esc(p.personas)}</span></div></div>`);
+    moviles.forEach((t) => datos.push(datoCopiable('Móvil', telBonito(t), `tel:${telLink(t)}`)));
+    fijos.forEach((t) => datos.push(datoCopiable('Teléfono fijo', telBonito(t), `tel:${telLink(t)}`)));
+    emails.forEach((m) => datos.push(datoCopiable('Correo', m, `mailto:${m}`)));
+    if (p.web) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Web</span><a class="v" href="${esc(/^https?:/i.test(p.web) ? p.web : 'https://' + p.web)}" target="_blank" rel="noopener">${esc(p.web.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, ''))}</a></div>${ico('web', 18, '#A39A93', 1.8)}</div>`);
+    if (p.poblacion || p.provincia) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Población</span><span class="v">${esc([p.poblacion, p.provincia].filter(Boolean).join(' · '))}</span></div></div>`);
+    if (p.cif) datos.push(datoCopiable('CIF', p.cif));
+    if (p.recomendado_por) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Recomendado por</span><span class="v">${esc(p.recomendado_por)}</span></div></div>`);
+    const borrado = !!p.eliminado_en;
+    el.innerHTML = `
+      <div class="barra-nav"><a class="btn-texto ${ancho() ? 'solo-movil' : ''}" href="#/">${ico('atras', 22, '#575049', 2.2)}Contacta</a><span></span>
+        ${borrado ? '' : `<a class="btn-texto" href="#/editar/${p.id}">Editar</a>`}</div>
+      ${borrado ? `<div class="marca-sinv" style="border-style:solid;background:#FFF4D6;color:#6B5310">${ico('papelera', 18, '#6B5310', 1.8)}<span>Está en la papelera. <a href="#/papelera" style="text-decoration:underline">Ver papelera</a></span></div>` : ''}
+      <div class="identidad">
+        <div class="ico-grande">${icoFam(famN, 34, '#575049')}</div>
+        <h1 class="nombre-grande">${esc(p.nombre)}</h1>
+        <div class="subtitulo"><span>${esc(p._ofs.map((o) => o.nombre).join(' · ') || 'Sin oficio')}</span></div>
+        <div class="subtitulo">${p.estado === 'inactivo' ? '<span class="pastilla inact">Empresa cerrada</span>' : p._trab ? '<span class="pastilla trab">Trabajado con nosotros</span>' : '<span class="pastilla ref">Referencia</span>'}
+          ${p.sin_verificar ? '<span class="pastilla sinv" title="No se pudo confirmar que siga activa">Sin verificar</span>' : ''}</div>
+      </div>
+      <div class="acciones">
+        <a class="accion rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'}>${ico('tel', 20, '#fff')}Llamar</a>
+        <a class="accion" ${moviles[0] ? `href="https://wa.me/${telLink(moviles[0]).replace('+', '')}" target="_blank" rel="noopener"` : 'aria-disabled="true"'}>${ico('wa', 20, '#575049')}WhatsApp</a>
+        <a class="accion" ${emails[0] ? `href="mailto:${esc(emails[0])}"` : 'aria-disabled="true"'}>${ico('correo', 20, '#575049')}Correo</a>
+        <button class="accion" id="a-copiar">${ico('copiar', 20, '#575049')}<span>Copiar</span></button>
+        <button class="accion" id="a-vcf">${ico('contacto', 20, '#575049')}<span>Guardar en contactos</span></button>
+        <button class="accion" id="a-compartir">${ico('compartir', 20, '#575049')}<span>Compartir</span></button>
+      </div>
+      ${p.sin_verificar ? `<div class="marca-sinv" style="margin-top:12px">${ico('info', 18, '#736A63', 1.8)}<span>No pudimos confirmar que siga activa. Si hablas con ellos, edita o valora la ficha y la marca desaparece.</span></div>` : ''}
+      ${datos.length ? `<div class="seccion"><span class="etiqueta-sec">Contacto</span></div><div class="tarjeta">${datos.join('')}</div>` : ''}
+      <div class="seccion"><span class="etiqueta-sec">Valoraciones</span>
+        ${p._n ? `<span style="display:flex;align-items:center;gap:4px;font-size:15px;font-weight:600">${estrella('#E8A317', 14)}${p._media.toFixed(1).replace('.', ',')}<span style="font-weight:400;color:var(--sec)">· ${p._n}</span></span>` : ''}</div>
+      ${p._n ? `<div class="tarjeta">${p._vals.map((v) => valoracionHTML(v)).join('')}</div>` : `<div class="ayuda" style="padding-top:0">Nadie la ha valorado todavía.</div>`}
+      ${borrado ? '' : `<div style="margin:10px 20px 0"><button class="btn-blanco" id="a-valorar">${ico(mia ? 'ok' : 'mas', 18, '#575049')}${mia ? 'Cambiar mi valoración' : 'Añadir valoración'}</button></div>`}
+      ${p.notas ? `<div class="seccion"><span class="etiqueta-sec">Notas</span></div><div class="tarjeta"><div class="texto-bloque">${esc(p.notas)}</div></div>` : ''}
+      <div class="pie">Añadido por ${esc(nombreUsuario(p.creado_por, p.creado_por_texto))} · ${fecha(p.created_at)}${p.updated_at && p.updated_at !== p.created_at ? ` · Última edición ${hace(p.updated_at)}` : ''}</div>
+      ${borrado ? '' : `<div style="margin:22px 20px 0"><button class="btn-blanco btn-peligro" id="a-eliminar">${ico('papelera', 18, '#B4151B', 1.8)}Eliminar proveedor</button></div>`}
+      <div style="height:32px"></div>`;
+    el.querySelectorAll('[data-copia]').forEach((b) => b.onclick = async () => { if (await copiarTexto(b.dataset.copia)) marcarCopiado(b, true); });
+    el.querySelector('#a-copiar').onclick = async (e) => { if (await copiarProveedores([p])) { marcarCopiado(e.currentTarget, true); aviso('Copiado. Pégalo en el comparativo.'); } };
+    el.querySelector('#a-vcf').onclick = () => descargarVcf(p);
+    el.querySelector('#a-compartir').onclick = () => compartir(p);
+    const bv = el.querySelector('#a-valorar'); if (bv) bv.onclick = () => hojaValorar(p, mia);
+    const be = el.querySelector('#a-eliminar'); if (be) be.onclick = () => eliminar(p);
+    el.querySelectorAll('.valoracion > button').forEach((b) => b.onclick = () => {
+      const v = b.parentElement; const id = v.dataset.v;
+      if (abiertas.has(id)) abiertas.delete(id); else abiertas.add(id);
+      v.classList.toggle('abierta'); v.querySelector('.val-det').hidden = !v.classList.contains('abierta');
+      b.setAttribute('aria-expanded', v.classList.contains('abierta'));
+    });
+    el.querySelectorAll('[data-borrar-val]').forEach((b) => b.onclick = async () => {
+      if (!await confirmar('¿Borrar esta valoración?', 'Se quitará de la ficha.', 'Borrar', true)) return;
+      if (!enLinea()) return aviso('Sin conexión', false);
+      const { error } = await sb.from('valoraciones').delete().eq('id', Number(b.dataset.borrarVal));
+      if (error) return aviso('No se ha podido borrar: ' + error.message, false);
+      aviso('Valoración borrada'); await cargarDatos(); pintar();
+    });
+  }
+  function datoCopiable(k, v, href) {
+    return `<div class="dato"><div class="dato-txt"><span class="k">${esc(k)}</span>${href ? `<a class="v" href="${esc(href)}">${esc(v)}</a>` : `<span class="v">${esc(v)}</span>`}</div>
+      <button class="btn-copiar" data-copia="${esc(v)}" aria-label="Copiar ${esc(k.toLowerCase())}">${ico('copiar', 16, '#575049')}<span>Copiar</span></button></div>`;
+  }
+  function valoracionHTML(v) {
+    const ab = abiertas.has(String(v.id));
+    const puedo = sesion && (v.usuario_id === sesion.user.id || esAdmin());
+    return `<div class="valoracion ${ab ? 'abierta' : ''}" data-v="${v.id}">
+      <button aria-expanded="${ab}"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+        <span style="font-size:16px;font-weight:600">${esc(v.obra || nombreUsuario(v.usuario_id))}</span>
+        <span style="font-size:13px;color:var(--sec)">${esc(nombreUsuario(v.usuario_id))}${v.empresa ? ' · ' + esc(v.empresa) : ''} · ${fecha(v.updated_at || v.created_at)}</span></div>
+        ${estrellas(v.estrellas)}<span class="chev-rot">${ico('chev', 16, '#A39A93', 2.2)}</span></button>
+      <div class="val-det" ${ab ? '' : 'hidden'}>
+        ${v.comentario ? `<div>${esc(v.comentario)}</div>` : '<div style="color:var(--sec)">Sin comentario.</div>'}
+        ${puedo ? `<div><button class="btn-texto btn-peligro" style="padding:0;font-size:14px" data-borrar-val="${v.id}">Borrar valoración</button></div>` : ''}
+      </div></div>`;
+  }
+
+  /* --- Contactos, compartir --- */
+  function vcfDe(p) {
+    const l = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
+    const persona = (p.personas || '').split(/\s*[\/;,]\s*/)[0] || '';
+    const v = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${l(persona ? persona + ' (' + p.nombre + ')' : p.nombre)}`, `N:${l(persona || p.nombre)};;;;`, `ORG:${l(p.nombre)}`];
+    if (p._ofs.length) v.push(`TITLE:${l(p._ofs.map((o) => o.nombre).join(', '))}`);
+    partes(p.moviles).forEach((t) => v.push(`TEL;TYPE=CELL:${telLink(t)}`));
+    partes(p.fijos).forEach((t) => v.push(`TEL;TYPE=WORK:${telLink(t)}`));
+    partes(p.emails).forEach((m) => v.push(`EMAIL;TYPE=WORK:${l(m)}`));
+    if (p.web) v.push(`URL:${l(p.web)}`);
+    if (p.poblacion || p.provincia) v.push(`ADR;TYPE=WORK:;;;${l(p.poblacion)};${l(p.provincia)};;España`);
+    v.push(`NOTE:${l('Proveedor de Contacta' + (p.personas ? ' · Contacto: ' + p.personas : ''))}`, 'END:VCARD');
+    return v.join('\r\n');
+  }
+  const archivoVcf = (p) => new File([vcfDe(p)], (p.nombre.replace(/[^\w\- ]+/g, '').trim() || 'proveedor') + '.vcf', { type: 'text/vcard' });
+  function descargarVcf(p) {
+    const f = archivoVcf(p); const url = URL.createObjectURL(f);
+    const a = document.createElement('a'); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    aviso('Abre el archivo para guardarlo en tus contactos');
+  }
+  function textoFicha(p) {
+    const t = [p.nombre];
+    if (p._ofs.length) t.push(p._ofs.map((o) => o.nombre).join(', '));
+    if (p.personas) t.push('Contacto: ' + p.personas);
+    [...partes(p.moviles), ...partes(p.fijos)].forEach((x) => t.push('Tel: ' + telBonito(x)));
+    partes(p.emails).forEach((x) => t.push('Email: ' + x));
+    if (p.web) t.push('Web: ' + p.web);
+    if (p.poblacion || p.provincia) t.push([p.poblacion, p.provincia].filter(Boolean).join(', '));
+    return t.join('\n');
+  }
+  async function compartir(p) {
+    const texto = textoFicha(p);
+    if (navigator.share) {
+      try {
+        const f = archivoVcf(p);
+        if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ title: p.nombre, text: texto, files: [f] });
+        else await navigator.share({ title: p.nombre, text: texto });
+        return;
+      } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><span></span><div class="hoja-titulo">Compartir</div><button class="btn-texto" data-c>Cerrar</button></div>
+      <div class="tarjeta" style="margin-top:10px"><div class="texto-bloque">${esc(texto)}</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 20px 0">
+        <button class="btn-blanco" id="sh-copiar">${ico('copiar', 18, '#575049')}Copiar</button>
+        <a class="btn-blanco" href="mailto:?subject=${encodeURIComponent('Proveedor: ' + p.nombre)}&body=${encodeURIComponent(texto)}">${ico('correo', 18, '#575049')}Enviar por correo</a>
+      </div>`, (h) => {
+      h.querySelector('[data-c]').onclick = cerrarHoja;
+      h.querySelector('#sh-copiar').onclick = async (e) => { if (await copiarTexto(texto)) marcarCopiado(e.currentTarget, true); };
+    });
+  }
+
+  /* --- Valorar --- */
+  function hojaValorar(p, mia) {
+    let n = mia ? mia.estrellas : 0;
+    const obras = [...new Set(D.vals.map((v) => (v.obra || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+    abrirHoja(`<div class="hoja-asa"></div>
+      <div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Valorar</div><button class="btn-texto fuerte" id="v-pub" disabled>Publicar</button></div>
+      <div style="text-align:center;padding:8px 20px 0;font-size:15px;color:var(--sec)">${esc(p.nombre)}</div>
+      <div class="selector-estrellas" role="radiogroup" aria-label="Estrellas">${[1, 2, 3, 4, 5].map((k) => `<button data-n="${k}" aria-label="${k} estrella${k > 1 ? 's' : ''}">${estrella('#E6E1DC', 34)}</button>`).join('')}</div>
+      <div class="form-grupo">
+        <div class="campo"><label for="v-obra">Obra</label><input id="v-obra" list="obras-dl" placeholder="Opcional" maxlength="120" value="${esc(mia ? mia.obra || '' : '')}"></div>
+        <div class="campo col"><label for="v-com">Comentario</label><textarea id="v-com" rows="3" maxlength="500" placeholder="¿Qué tal fue? Calidad, plazos, precio…">${esc(mia ? mia.comentario || '' : '')}</textarea></div>
+      </div>
+      <datalist id="obras-dl">${obras.map((o) => `<option value="${esc(o)}">`).join('')}</datalist>
+      <div class="ayuda">Valora el trabajo de la empresa, no a personas. Se publica con tu nombre (${esc(yo ? yo.nombre : '')}) y la fecha de hoy.</div>`, (h) => {
+      const pub = h.querySelector('#v-pub');
+      const pintarE = () => { h.querySelectorAll('[data-n]').forEach((b) => { b.innerHTML = estrella(Number(b.dataset.n) <= n ? '#E8A317' : '#E6E1DC', 34); }); pub.disabled = !n; };
+      h.querySelectorAll('[data-n]').forEach((b) => b.onclick = () => { n = Number(b.dataset.n); pintarE(); });
+      pintarE();
+      h.querySelector('[data-c]').onclick = cerrarHoja;
+      pub.onclick = async () => {
+        if (!enLinea()) return aviso('Sin conexión', false);
+        pub.disabled = true;
+        const fila = { proveedor_id: p.id, usuario_id: sesion.user.id, estrellas: n, obra: h.querySelector('#v-obra').value.trim() || null, comentario: h.querySelector('#v-com').value.trim() || null };
+        const { error } = mia ? await sb.from('valoraciones').update({ estrellas: fila.estrellas, obra: fila.obra, comentario: fila.comentario }).eq('id', mia.id)
+          : await sb.from('valoraciones').insert(fila);
+        if (error) { pub.disabled = false; return aviso('No se ha podido guardar: ' + error.message, false); }
+        cerrarHoja(); aviso('Valoración publicada'); await cargarDatos(); pintar();
+      };
+    });
+  }
+
+  /* --- Eliminar --- */
+  async function eliminar(p) {
+    const ofs = p._ofs.map((o) => o.nombre);
+    abrirHoja(`<div class="hoja-asa"></div>
+      <div style="padding:8px 20px 0"><div class="hoja-titulo" style="text-align:left;font-size:20px">¿Eliminar ${esc(p.nombre)}?</div></div>
+      <p>${ofs.length > 1 ? `Aparece en <b>${ofs.length} oficios</b>: ${esc(ofs.join(', '))}. Se eliminará de todos.` : `Aparece en ${esc(ofs[0] || 'ningún oficio')}.`}
+        Si solo quieres quitarle un oficio, usa «Editar».</p>
+      <div class="form-grupo"><div class="campo"><label for="e-mot">Motivo</label><select id="e-mot">
+        <option>Ha cerrado</option><option>Se ha jubilado</option><option>El teléfono no existe</option><option>Duplicado</option><option>No es un proveedor</option><option>Otro</option></select></div></div>
+      <div class="ayuda">Quedará 30 días en la papelera y cualquiera podrá recuperarlo.</div>
+      <div style="display:flex;gap:8px;padding:14px 20px 0"><button class="btn-blanco" data-c>Cancelar</button><button class="btn-lleno ancho" id="e-ok" style="background:#B4151B">Eliminar</button></div>`, (h) => {
+      h.querySelector('[data-c]').onclick = cerrarHoja;
+      h.querySelector('#e-ok').onclick = async () => {
+        if (!enLinea()) return aviso('Sin conexión', false);
+        const { error } = await sb.from('proveedores').update({ eliminado_en: new Date().toISOString(), motivo_eliminacion: h.querySelector('#e-mot').value }).eq('id', p.id);
+        if (error) return aviso('No se ha podido eliminar: ' + error.message, false);
+        cerrarHoja(); aviso('Movido a la papelera'); await cargarDatos(); ir('#/');
+      };
+    });
+  }
+
+  /* ---------------- Alta y edición ---------------- */
+  const GENERICOS = new Set(['gmail.com', 'hotmail.com', 'hotmail.es', 'yahoo.es', 'yahoo.com', 'outlook.com', 'outlook.es', 'live.com', 'icloud.com', 'telefonica.net', 'movistar.es', 'terra.es', 'msn.com', 'gmx.es', 'orange.es', 'ono.com']);
+  function pintarFormulario(el, p) {
+    if (p === undefined) { el.innerHTML = '<div class="vacio"><h2>No existe</h2></div>'; return; }
+    const editar = !!p;
+    const st = { ofs: editar ? p._ofs.map((o) => o.id) : [], estrellas: 0 };
+    const v = (k) => esc(editar ? p[k] || '' : '');
+    el.innerHTML = `
+      <form id="f-prov" novalidate>
+      <div class="barra-nav"><a class="btn-texto" href="${editar ? '#/p/' + p.id : '#/'}">Cancelar</a><div class="hoja-titulo">${editar ? 'Editar proveedor' : 'Nuevo proveedor'}</div><button class="btn-texto fuerte" type="submit" id="g-btn">Guardar</button></div>
+      ${editar ? '' : `<div class="etiqueta-sec" style="padding:14px 36px 6px">Rellenar automáticamente</div>
+      <div class="relleno"><button type="button" class="btn-blanco" id="b-pegar">${ico('pegar', 18, '#575049')}Pegar texto</button>
+        <button type="button" class="btn-blanco" id="b-foto" style="opacity:.55" title="Disponible cuando se active la IA">${ico('camara', 18, '#575049')}Pantallazo</button></div>
+      <div class="ayuda">Pega un mensaje de WhatsApp, una firma de correo o una tarjeta y se rellenan los datos. Revísalos antes de guardar.</div>`}
+      <div class="etiqueta-sec" style="padding:18px 36px 6px">Datos</div>
+      <div class="form-grupo">
+        <div class="campo"><label for="c-nombre" class="oblig">Nombre</label><input id="c-nombre" required maxlength="160" placeholder="Empresa" value="${v('nombre')}"></div>
+        <div class="chips-oficio" id="chips"></div>
+        <div class="campo"><label for="c-moviles" class="${editar ? '' : 'oblig'}">Móvil</label><input id="c-moviles" type="tel" inputmode="tel" placeholder="600 000 000" value="${esc(editar ? partes(p.moviles).map(telBonito).join('; ') : '')}"></div>
+        <div class="campo"><label for="c-fijos">Fijo</label><input id="c-fijos" type="tel" inputmode="tel" placeholder="930 000 000" value="${esc(editar ? partes(p.fijos).map(telBonito).join('; ') : '')}"></div>
+        <div class="campo"><label for="c-personas">Contacto</label><input id="c-personas" placeholder="Persona de contacto" value="${v('personas')}"></div>
+        <div class="campo"><label for="c-emails">Correo</label><input id="c-emails" type="email" inputmode="email" placeholder="correo@empresa.com" value="${v('emails')}"></div>
+      </div>
+      <div class="ayuda">Puedes poner varios teléfonos o correos separados por «;».</div>
+      <div class="etiqueta-sec" style="padding:18px 36px 6px">Más datos</div>
+      <div class="form-grupo">
+        <div class="campo"><label for="c-web">Web</label><input id="c-web" inputmode="url" placeholder="www.empresa.com" value="${v('web')}"></div>
+        <div class="campo"><label for="c-poblacion">Población</label><input id="c-poblacion" value="${v('poblacion')}"></div>
+        <div class="campo"><label for="c-provincia">Provincia</label><input id="c-provincia" value="${v('provincia')}"></div>
+        <div class="campo"><label for="c-cif">CIF</label><input id="c-cif" maxlength="12" value="${v('cif')}"></div>
+        <div class="campo"><label for="c-rec">Recomendado</label><input id="c-rec" placeholder="¿Quién lo recomienda?" value="${v('recomendado_por')}"></div>
+        <div class="campo col"><label for="c-notas">Notas</label><textarea id="c-notas" rows="3" placeholder="Observaciones para el equipo">${v('notas')}</textarea></div>
+        ${editar ? `<div class="campo"><label for="c-estado">Estado</label><select id="c-estado"><option value="activo" ${p.estado === 'activo' ? 'selected' : ''}>Activa</option><option value="inactivo" ${p.estado === 'inactivo' ? 'selected' : ''}>Cerrada</option></select></div>` : ''}
+      </div>
+      ${editar ? '' : `<div class="etiqueta-sec" style="padding:18px 36px 6px">¿Has trabajado con él?</div>
+      <div class="tarjeta" style="padding:4px 0 10px"><div class="selector-estrellas" id="alta-est">${[1, 2, 3, 4, 5].map((k) => `<button type="button" data-n="${k}" aria-label="${k} estrellas">${estrella('#E6E1DC', 32)}</button>`).join('')}</div>
+        <div id="alta-obra" hidden><div class="campo" style="border-top:.5px solid var(--linea)"><label for="c-obra">Obra</label><input id="c-obra" placeholder="Opcional"></div>
+        <div class="ayuda" style="padding:6px 16px 0">Contará como tu valoración. Valora el trabajo de la empresa, no a personas.</div></div></div>`}
+      <div id="f-error" class="error-txt" hidden></div>
+      ${editar ? '' : `<div class="ayuda" style="padding-top:18px">Lo verá todo el equipo de Bosch Pascual, RECOP y Munné.</div>`}
+      <div style="padding:18px 20px 0"><button class="btn-lleno ancho" type="submit">Guardar</button></div>
+      </form><div style="height:40px"></div>`;
+    const pintarChips = () => {
+      const c = el.querySelector('#chips');
+      c.innerHTML = `<span class="oblig" style="font-size:16px;margin-right:6px">Oficio</span>` + st.ofs.map((id) => {
+        const o = IDX.of.get(id); return o ? `<span class="chip-of">${esc(o.nombre)}<button type="button" data-q="${id}" aria-label="Quitar ${esc(o.nombre)}">${ico('x', 12, '#736A63', 2.6)}</button></span>` : '';
+      }).join('') + `<button type="button" class="chip" id="add-of">${ico('mas', 14, '#575049', 2.4)}${st.ofs.length ? 'Otro' : 'Elegir oficio'}</button>`;
+      c.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => { st.ofs = st.ofs.filter((x) => x !== Number(b.dataset.q)); pintarChips(); });
+      c.querySelector('#add-of').onclick = () => hojaOficio((id) => { if (!st.ofs.includes(id)) st.ofs.push(id); pintarChips(); });
+    };
+    pintarChips();
+    if (!editar) {
+      el.querySelector('#b-pegar').onclick = () => hojaPegar(el);
+      el.querySelector('#b-foto').onclick = () => aviso('El pantallazo llegará cuando se active la IA. De momento, usa «Pegar texto».', false);
+      const pintarE = () => { el.querySelectorAll('#alta-est [data-n]').forEach((b) => { b.innerHTML = estrella(Number(b.dataset.n) <= st.estrellas ? '#E8A317' : '#E6E1DC', 32); }); el.querySelector('#alta-obra').hidden = !st.estrellas; };
+      el.querySelectorAll('#alta-est [data-n]').forEach((b) => b.onclick = () => { const k = Number(b.dataset.n); st.estrellas = st.estrellas === k ? 0 : k; pintarE(); });
+    }
+    el.querySelector('#f-prov').onsubmit = async (ev) => {
+      ev.preventDefault();
+      const g = (id) => el.querySelector('#' + id).value.trim();
+      const err = (t) => { const e = el.querySelector('#f-error'); e.textContent = t; e.hidden = !t; if (t) e.scrollIntoView({ block: 'center' }); };
+      const normT = (s) => partes(s.replace(/,|\//g, ';')).map(telBonito).join('; ') || null;
+      const fila = {
+        nombre: g('c-nombre'), moviles: normT(g('c-moviles')), fijos: normT(g('c-fijos')), personas: g('c-personas') || null,
+        emails: partes(g('c-emails').replace(/,|\s+/g, ';')).map((x) => x.toLowerCase()).join('; ') || null,
+        web: g('c-web') || null, poblacion: g('c-poblacion') || null, provincia: g('c-provincia') || null,
+        cif: g('c-cif').toUpperCase().replace(/[\s.-]/g, '') || null, recomendado_por: g('c-rec') || null, notas: g('c-notas') || null
+      };
+      if (editar) fila.estado = el.querySelector('#c-estado').value;
+      if (!fila.nombre) return err('Falta el nombre.');
+      if (!st.ofs.length) return err('Elige al menos un oficio.');
+      if (!editar && !fila.moviles && !fila.fijos) return err('Pon al menos un teléfono.');
+      if (!enLinea()) return err('Sin conexión: no se puede guardar ahora.');
+      const btns = el.querySelectorAll('[type=submit]'); btns.forEach((b) => { b.disabled = true; });
+      try {
+        if (editar) {
+          const { error } = await sb.from('proveedores').update(fila).eq('id', p.id); if (error) throw error;
+          const antes = p._ofs.map((o) => o.id);
+          const quitar = antes.filter((x) => !st.ofs.includes(x)); const poner = st.ofs.filter((x) => !antes.includes(x));
+          if (quitar.length) { const r = await sb.from('proveedor_oficios').delete().eq('proveedor_id', p.id).in('oficio_id', quitar); if (r.error) throw r.error; }
+          if (poner.length) { const r = await sb.from('proveedor_oficios').insert(poner.map((o) => ({ proveedor_id: p.id, oficio_id: o }))); if (r.error) throw r.error; }
+          aviso('Cambios guardados'); await cargarDatos(); ir('#/p/' + p.id);
+        } else {
+          const dups = posiblesDuplicados(fila);
+          if (dups.length) {
+            const decision = await hojaDuplicados(dups);
+            if (decision === 'cancelar') { btns.forEach((b) => { b.disabled = false; }); return; }
+            if (decision !== 'crear') { btns.forEach((b) => { b.disabled = false; }); return; }
+            fila.revisar_duplicado = true;
+          }
+          const { data, error } = await sb.from('proveedores').insert(fila).select('id').single(); if (error) throw error;
+          const r = await sb.from('proveedor_oficios').insert(st.ofs.map((o) => ({ proveedor_id: data.id, oficio_id: o }))); if (r.error) throw r.error;
+          if (st.estrellas) await sb.from('valoraciones').insert({ proveedor_id: data.id, usuario_id: sesion.user.id, estrellas: st.estrellas, obra: (el.querySelector('#c-obra').value.trim() || null) });
+          aviso('Proveedor añadido'); await cargarDatos(); ir('#/p/' + data.id);
+        }
+      } catch (e) { err('No se ha podido guardar: ' + (e.message || e)); btns.forEach((b) => { b.disabled = false; }); }
+    };
+  }
+  function posiblesDuplicados(f) {
+    const tels = [...partes(f.moviles), ...partes(f.fijos)].map(tel9).filter((t) => t.length === 9);
+    const mails = partes(f.emails); const dominios = mails.map((m) => m.split('@')[1]).filter((d) => d && !GENERICOS.has(d));
+    const wn = palabras(f.nombre).join(' ');
+    return D.prov.filter((p) => {
+      if (tels.some((t) => p._tels.includes(t))) return true;
+      const pm = partes(p.emails).map((x) => x.toLowerCase());
+      if (mails.some((m) => pm.includes(m))) return true;
+      if (dominios.length && pm.some((m) => dominios.includes(m.split('@')[1]))) return true;
+      if (f.cif && p.cif && f.cif === p.cif.replace(/[\s.-]/g, '').toUpperCase()) return true;
+      const pn = p._wNombre.join(' ');
+      return wn.length >= 4 && (pn === wn || (wn.length >= 6 && (pn.includes(wn) || wn.includes(pn) && pn.length >= 6)));
+    }).slice(0, 6);
+  }
+  function hojaDuplicados(dups) {
+    return new Promise((res) => {
+      abrirHoja(`<div class="hoja-asa"></div><div style="padding:8px 20px 0"><div class="hoja-titulo" style="text-align:left;font-size:20px">¿Es alguno de estos?</div></div>
+        <p>Ya hay proveedores con el mismo teléfono, correo o un nombre parecido.</p>
+        <div class="tarjeta">${dups.map((p) => `<div class="fila"><div class="fila-txt"><div class="fila-nombre">${esc(p.nombre)}</div>
+          <div class="fila-meta">${esc(p._ofs.map((o) => o.nombre).join(', '))}${p.eliminado_en ? ' · <b>En la papelera</b>' : ''}</div></div>
+          ${p.eliminado_en ? `<button class="chip" data-rest="${p.id}">Restaurar</button>` : `<button class="chip" data-ver="${p.id}">Es este</button>`}</div>`).join('')}</div>
+        <div style="display:flex;gap:8px;padding:14px 20px 0"><button class="btn-blanco" data-r="cancelar">Volver</button><button class="btn-lleno ancho" data-r="crear">No, crear nuevo</button></div>
+        <div class="ayuda">Si lo creas igualmente, el administrador lo revisará.</div>`, (h) => {
+        h.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => { cerrarHoja(); res(b.dataset.r); });
+        h.querySelectorAll('[data-ver]').forEach((b) => b.onclick = () => { cerrarHoja(); res('ver'); ir('#/p/' + b.dataset.ver); });
+        h.querySelectorAll('[data-rest]').forEach((b) => b.onclick = async () => { cerrarHoja(); res('ver'); await restaurar(Number(b.dataset.rest)); ir('#/p/' + b.dataset.rest); });
+      });
+      capa.onclick = (e) => { if (e.target === capa) { cerrarHoja(); res('cancelar'); } };
+    });
+  }
+
+  // Elegir oficio: buscador + rueda en dos niveles (familia → oficio) + crear nuevo.
+  function hojaOficio(alElegir) {
+    const fams = familiasOrden(); let nivel = 'fam'; let fi = 0; let oi = 0;
+    const pintarH = (h) => {
+      const cuerpo = h.querySelector('#ho-cuerpo'); const q = h.querySelector('#ho-q').value.trim();
+      const bar = h.querySelector('#ho-bar');
+      if (q) {
+        const nq = palabras(q);
+        const res = oficiosVivos().map((o) => ({ o, s: nq.reduce((s, t) => s + Math.max(puntuaToken(t, palabras(o.nombre)) * 2, puntuaToken(t, palabras((o.sinonimos || []).join(' ')))), 0), ok: nq.every((t) => puntuaToken(t, palabras(o.nombre + ' ' + (o.sinonimos || []).join(' ')))) }))
+          .filter((x) => x.ok).sort((a, b) => b.s - a.s).slice(0, 12);
+        bar.innerHTML = `<button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Oficio</div><span></span>`;
+        cuerpo.innerHTML = `<div class="tarjeta" style="margin-top:8px">${res.map((x) => `<div class="fila"><button class="fila-enlace" data-of="${x.o.id}"><div class="fila-txt"><div class="fila-nombre">${esc(x.o.nombre)}</div><div class="fila-meta">${esc((IDX.fam.get(x.o.familia_id) || {}).nombre || '')}</div></div></button></div>`).join('') || '<div class="texto-bloque" style="color:var(--sec)">Ningún oficio coincide.</div>'}</div>
+          <div style="margin:10px 20px 0"><button class="btn-blanco" id="ho-nuevo">${ico('mas', 18, '#575049')}Añadir oficio nuevo: «${esc(q)}»</button></div>`;
+        cuerpo.querySelectorAll('[data-of]').forEach((b) => b.onclick = () => { cerrarHoja(); alElegir(Number(b.dataset.of)); });
+        cuerpo.querySelector('#ho-nuevo').onclick = () => crearOficio(q, fams[fi]);
+      } else if (nivel === 'fam') {
+        bar.innerHTML = `<button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Familia</div><button class="btn-texto fuerte" id="ho-sig">Siguiente</button>`;
+        cuerpo.innerHTML = '<div id="ho-rueda"></div>';
+        montarRueda(cuerpo.querySelector('#ho-rueda'), fams.map((f) => ({ label: f.nombre, icon: icoFam(f.nombre, 20, '#575049'), chev: true })), fi, true, (i) => { fi = i; }, (i) => { fi = i; nivel = 'of'; oi = 0; pintarH(h); });
+        bar.querySelector('#ho-sig').onclick = () => { nivel = 'of'; oi = 0; pintarH(h); };
+      } else {
+        const ofs = oficiosDeFam(fams[fi].id);
+        bar.innerHTML = `<button class="btn-texto" id="ho-atr">${ico('atras', 20, '#575049', 2.2)}Familias</button><div class="hoja-titulo" style="font-size:15px">${esc(fams[fi].nombre)}</div><button class="btn-texto fuerte" id="ho-ok">Hecho</button>`;
+        cuerpo.innerHTML = '<div id="ho-rueda"></div><div style="margin:4px 20px 0"><button class="btn-texto" id="ho-nuevo2" style="font-size:15px">¿No está? Añadir oficio nuevo</button></div>';
+        montarRueda(cuerpo.querySelector('#ho-rueda'), ofs.map((o) => ({ label: o.nombre, icon: icoFam(fams[fi].nombre, 20, '#575049') })), oi, ofs.length >= 6, (i) => { oi = i; }, (i) => { cerrarHoja(); alElegir(ofs[i].id); });
+        bar.querySelector('#ho-atr').onclick = () => { nivel = 'fam'; pintarH(h); };
+        bar.querySelector('#ho-ok').onclick = () => { cerrarHoja(); if (ofs[oi]) alElegir(ofs[oi].id); };
+        cuerpo.querySelector('#ho-nuevo2').onclick = () => { h.querySelector('#ho-q').focus(); aviso('Escribe el nombre del oficio arriba', false); };
+      }
+      const c = bar.querySelector('[data-c]'); if (c) c.onclick = cerrarHoja;
+    };
+    const crearOficio = async (nombre, famDef) => {
+      const opciones = fams.map((f, i) => `<option value="${f.id}" ${f === famDef ? 'selected' : ''}>${esc(f.nombre)}</option>`).join('');
+      abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Oficio nuevo</div><button class="btn-texto fuerte" id="on-ok">Crear</button></div>
+        <div class="form-grupo" style="margin-top:12px"><div class="campo"><label for="on-n">Nombre</label><input id="on-n" value="${esc(nombre.charAt(0).toUpperCase() + nombre.slice(1))}"></div>
+        <div class="campo"><label for="on-f">Familia</label><select id="on-f">${opciones}</select></div></div>
+        <div class="ayuda">El administrador lo revisará. Antes, comprueba que no exista con otro nombre.</div>`, (h2) => {
+        h2.querySelector('[data-c]').onclick = cerrarHoja;
+        h2.querySelector('#on-ok').onclick = async () => {
+          const n = h2.querySelector('#on-n').value.trim(); if (!n) return;
+          if (!enLinea()) return aviso('Sin conexión', false);
+          const { data, error } = await sb.from('oficios').insert({ nombre: n, familia_id: Number(h2.querySelector('#on-f').value) }).select('id').single();
+          if (error) return aviso(/duplicate|unique/i.test(error.message) ? 'Ese oficio ya existe' : 'No se ha podido crear: ' + error.message, false);
+          await cargarDatos(); cerrarHoja(); alElegir(data.id); aviso('Oficio creado');
+        };
+      });
+    };
+    abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra" id="ho-bar"></div>
+      <div class="buscador" style="padding:10px 20px 4px"><div class="caja-busca">${ico('buscar', 17, '#736A63', 2.2)}<label for="ho-q" class="oculto-vis">Buscar oficio</label><input id="ho-q" type="text" placeholder="Buscar oficio (manyà, lampista…)" autocomplete="off"></div></div>
+      <div id="ho-cuerpo"></div>`, (h) => {
+      h.querySelector('#ho-q').oninput = debounce(() => pintarH(h), 120);
+      pintarH(h);
+    });
+  }
+
+  // «Pegar texto»: separa nombre, teléfonos, correos, web y CIF de un texto cualquiera (sin IA).
+  function hojaPegar(el) {
+    abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Pegar texto</div><button class="btn-texto fuerte" id="pg-ok">Rellenar</button></div>
+      <div class="form-grupo" style="margin-top:12px"><div class="campo col"><label for="pg-t">Texto</label><textarea id="pg-t" rows="7" placeholder="Pega aquí un mensaje, una firma de correo o una tarjeta de contacto" autofocus></textarea></div></div>`, (h) => {
+      h.querySelector('[data-c]').onclick = cerrarHoja;
+      h.querySelector('#pg-ok').onclick = () => {
+        const d = analizarTexto(h.querySelector('#pg-t').value);
+        const pon = (id, val) => { const i = el.querySelector('#' + id); if (val && i && !i.value.trim()) i.value = val; };
+        pon('c-nombre', d.nombre); pon('c-moviles', d.moviles.join('; ')); pon('c-fijos', d.fijos.join('; '));
+        pon('c-emails', d.emails.join('; ')); pon('c-web', d.web); pon('c-cif', d.cif); pon('c-personas', d.persona);
+        cerrarHoja(); aviso('Datos rellenados. Revísalos y elige el oficio.');
+      };
+    });
+  }
+  function analizarTexto(t) {
+    t = String(t || '');
+    const out = { nombre: '', persona: '', moviles: [], fijos: [], emails: [], web: '', cif: '' };
+    const vc = /BEGIN:VCARD/i.test(t);
+    if (vc) {
+      const get = (k) => (t.match(new RegExp('^' + k + '[^:]*:(.*)$', 'im')) || [])[1] || '';
+      out.nombre = get('ORG').split(';')[0].trim(); out.persona = get('FN').trim();
+    }
+    out.emails = [...new Set((t.match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g) || []).map((x) => x.toLowerCase()))];
+    const tels = t.match(/(\+?34[\s.-]?)?(\d[\s.-]?){8}\d/g) || [];
+    tels.forEach((x) => { const d = tel9(x); if (d.length !== 9) return; const b = telBonito(d); if (/^[67]/.test(d)) { if (!out.moviles.includes(b)) out.moviles.push(b); } else if (/^[89]/.test(d) && !out.fijos.includes(b)) out.fijos.push(b); });
+    const w = t.match(/\b(?:https?:\/\/)?(?:www\.)[\w-]+(\.[\w-]+)+[^\s]*/i) || t.match(/https?:\/\/[^\s]+/i);
+    if (w) out.web = w[0].replace(/[.,;)]+$/, '');
+    else if (out.emails[0]) { const dom = out.emails[0].split('@')[1]; if (!GENERICOS.has(dom)) out.web = 'www.' + dom; }
+    const c = t.toUpperCase().match(/\b[ABCDEFGHJNPQRSUVW]-?\d{7}[0-9A-J]\b/); if (c) out.cif = c[0].replace('-', '');
+    if (!out.nombre) {
+      const lineas = t.split(/\n/).map((l) => l.replace(/^[\s*_~>\-–•]+|[\s*_~]+$/g, '').trim()).filter((l) => l && !/@|https?:|www\.|\d{3}/.test(l) && l.length < 70);
+      const empresa = lineas.find((l) => /\b(s\.?l\.?u?|s\.?a\.?|sl|sa|slu|construc|instal|serveis|servicios|grup|group|hnos|germans)\b/i.test(l));
+      out.nombre = empresa || lineas[0] || '';
+      if (!out.persona) { const otra = lineas.find((l) => l !== out.nombre && /^[A-ZÁÉÍÓÚÑÇ][a-záéíóúñç]+(\s[A-ZÁÉÍÓÚÑÇ][a-záéíóúñç]+){1,3}$/.test(l)); if (otra) out.persona = otra; }
+    }
+    return out;
+  }
+
+  /* ---------------- Papelera ---------------- */
+  async function restaurar(id) {
+    if (!enLinea()) return aviso('Sin conexión', false);
+    const { error } = await sb.from('proveedores').update({ eliminado_en: null }).eq('id', id);
+    if (error) return aviso('No se ha podido restaurar: ' + error.message, false);
+    aviso('Restaurado'); await cargarDatos();
+  }
+  function pintarPapelera(el) {
+    const l = D.prov.filter((p) => p.eliminado_en).sort((a, b) => b.eliminado_en.localeCompare(a.eliminado_en));
+    el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#575049', 2.2)}Contacta</a></div>
+      <div style="padding:4px 20px 12px"><h1 class="titulo">Papelera</h1><div style="color:var(--sec);margin-top:6px;font-size:15px;line-height:1.4">Proveedores eliminados en los últimos 30 días. Cualquiera puede restaurarlos; después, solo el administrador.</div></div>
+      ${l.length ? `<div class="tarjeta">${l.map((p) => {
+        const dias = DIAS_PAPELERA - Math.floor((Date.now() - new Date(p.eliminado_en)) / 864e5);
+        return `<div class="fila"><div class="ico-caja" style="opacity:.6">${icoFam(p._fam, 20, '#575049')}</div><div class="fila-txt">
+          <div class="fila-nombre">${esc(p.nombre)}</div>
+          <div class="fila-meta" style="white-space:normal;flex-wrap:wrap">${esc(nombreUsuario(p.eliminado_por))} · ${hace(p.eliminado_en)}${p.motivo_eliminacion ? ' · ' + esc(p.motivo_eliminacion) : ''}
+            <span class="pastilla" style="${dias <= 5 ? 'background:#FBE3E1;color:#9C1C1C' : 'background:var(--suave)'}">${dias > 0 ? `Quedan ${dias} días` : 'Solo administrador'}</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:4px"><button class="chip" data-rest="${p.id}">${ico('restaurar', 14, '#575049', 2)}Restaurar</button>
+          ${esAdmin() ? `<button class="chip btn-peligro" data-borrar="${p.id}">Borrar</button>` : ''}</div></div>`;
+      }).join('')}</div>` : `<div class="vacio">${ico('papelera', 40, '#B5ADA6', 1.4)}<p>La papelera está vacía.</p></div>`}
+      <div class="ayuda" style="padding-top:12px">Al restaurar, la ficha vuelve con sus oficios y valoraciones.</div>`;
+    el.querySelectorAll('[data-rest]').forEach((b) => b.onclick = async () => { await restaurar(Number(b.dataset.rest)); pintar(); });
+    el.querySelectorAll('[data-borrar]').forEach((b) => b.onclick = async () => {
+      const p = IDX.porId.get(Number(b.dataset.borrar));
+      if (!await confirmar(`¿Borrar definitivamente ${p.nombre}?`, 'Se borra para siempre, con sus valoraciones. Queda una copia en el historial.', 'Borrar para siempre', true)) return;
+      const { error } = await sb.from('proveedores').delete().eq('id', p.id);
+      if (error) return aviso('No se ha podido borrar: ' + error.message, false);
+      aviso('Borrado definitivamente'); await cargarDatos(); pintar();
+    });
+  }
+
+  /* ---------------- Cuenta ---------------- */
+  function pintarCuenta(el) {
+    el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#575049', 2.2)}Contacta</a></div>
+      <div style="padding:4px 20px 12px"><h1 class="titulo">Mi cuenta</h1></div>
+      <div class="tarjeta"><div class="dato"><div class="dato-txt"><span class="k">Correo</span><span class="v">${esc(sesion.user.email)}</span></div></div>
+      <div class="dato"><div class="dato-txt"><span class="k">Empresa</span><span class="v">${esc(yo ? yo.empresa : '')}</span></div></div>
+      <div class="dato"><div class="dato-txt"><span class="k">Datos descargados</span><span class="v">${D.desde ? hace(D.desde) : '—'} · ${vivos().length} proveedores</span></div></div></div>
+      <div style="margin:14px 20px 0;display:flex;flex-direction:column;gap:8px">
+        <button class="btn-blanco" id="c-act">${ico('restaurar', 18, '#575049')}Actualizar datos</button>
+        <button class="btn-blanco" id="c-pass">Cambiar contraseña</button>
+        <button class="btn-blanco btn-peligro" id="c-salir">${ico('salir', 18, '#B4151B')}Cerrar sesión</button></div>
+      <div class="pie" style="text-align:center">Contacta ${esc(CFG.version)}</div>`;
+    el.querySelector('#c-act').onclick = async () => { if (!enLinea()) return aviso('Sin conexión', false); await cargarDatos(); aviso('Datos actualizados'); pintar(); };
+    el.querySelector('#c-pass').onclick = hojaNuevaContrasena;
+    el.querySelector('#c-salir').onclick = async () => { await sb.auth.signOut(); location.hash = ''; };
+  }
+
+  /* ---------------- Administración ---------------- */
+  let pestana = 'avisos';
+  async function pintarAdmin(el) {
+    const nuevos = D.oficios.filter((o) => o.nuevo && !o.redirige_a);
+    const dups = D.prov.filter((p) => p.revisar_duplicado && !p.eliminado_en);
+    const semana = D.prov.filter((p) => p.eliminado_en && Date.now() - new Date(p.eliminado_en) < 7 * 864e5);
+    el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#575049', 2.2)}Contacta</a><span></span><a class="btn-texto" href="#/cuenta">Mi cuenta</a></div>
+      <div style="padding:4px 20px 12px"><h1 class="titulo">Administración</h1></div>
+      <div class="pestanas" role="tablist">${[['avisos', 'Revisar'], ['usuarios', 'Usuarios'], ['historial', 'Historial'], ['datos', 'Datos']].map(([k, t]) => `<button role="tab" class="${pestana === k ? 'on' : ''}" data-t="${k}">${t}</button>`).join('')}</div>
+      <div id="adm"></div>`;
+    el.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { pestana = b.dataset.t; pintarAdmin(el); });
+    const z = el.querySelector('#adm');
+    if (pestana === 'avisos') {
+      z.innerHTML = `
+        <div class="seccion"><span class="etiqueta-sec">Oficios nuevos · ${nuevos.length}</span></div>
+        ${nuevos.length ? `<div class="tarjeta">${nuevos.map((o) => `<div class="fila" style="flex-wrap:wrap"><div class="fila-txt"><div class="fila-nombre">${esc(o.nombre)}</div><div class="fila-meta">${esc((IDX.fam.get(o.familia_id) || {}).nombre || '')} · ${esc(nombreUsuario(o.creado_por))}</div></div>
+          <button class="chip" data-acep="${o.id}">Aceptar</button><button class="chip" data-fus="${o.id}">Fusionar…</button></div>`).join('')}</div>` : '<div class="ayuda" style="padding-top:0">No hay oficios nuevos.</div>'}
+        <div class="seccion"><span class="etiqueta-sec">Posibles duplicados · ${dups.length}</span></div>
+        ${dups.length ? `<div class="tarjeta">${dups.map((p) => `<div class="fila"><button class="fila-enlace" data-abrir="${p.id}"><div class="fila-txt"><div class="fila-nombre">${esc(p.nombre)}</div><div class="fila-meta">Creado por ${esc(nombreUsuario(p.creado_por))} · ${hace(p.created_at)}</div></div></button><button class="chip" data-rev="${p.id}">Revisado</button></div>`).join('')}</div>` : '<div class="ayuda" style="padding-top:0">Ninguno pendiente.</div>'}
+        <div class="seccion"><span class="etiqueta-sec">Eliminados esta semana · ${semana.length}</span><a href="#/papelera" style="font-size:15px;font-weight:600">Papelera</a></div>
+        ${semana.length ? `<div class="tarjeta">${semana.map((p) => `<div class="fila"><div class="fila-txt"><div class="fila-nombre">${esc(p.nombre)}</div><div class="fila-meta">${esc(nombreUsuario(p.eliminado_por))} · ${hace(p.eliminado_en)} · ${esc(p.motivo_eliminacion || '')}</div></div></div>`).join('')}</div>` : '<div class="ayuda" style="padding-top:0">Nada eliminado en los últimos 7 días.</div>'}`;
+      engancharFilas(z);
+      z.querySelectorAll('[data-acep]').forEach((b) => b.onclick = async () => { const { error } = await sb.from('oficios').update({ nuevo: false }).eq('id', Number(b.dataset.acep)); if (error) return aviso(error.message, false); await cargarDatos(); pintarAdmin(el); aviso('Oficio aceptado'); });
+      z.querySelectorAll('[data-rev]').forEach((b) => b.onclick = async () => { const { error } = await sb.from('proveedores').update({ revisar_duplicado: false }).eq('id', Number(b.dataset.rev)); if (error) return aviso(error.message, false); await cargarDatos(); pintarAdmin(el); });
+      z.querySelectorAll('[data-fus]').forEach((b) => b.onclick = () => fusionarOficio(Number(b.dataset.fus), () => pintarAdmin(el)));
+    } else if (pestana === 'usuarios') {
+      const us = D.usuarios.slice().sort((a, b) => a.email.localeCompare(b.email));
+      z.innerHTML = `<div class="seccion"><span class="etiqueta-sec">${us.length} usuarios</span></div><div class="tarjeta">${us.map((u) => `<div class="fila"><div class="fila-txt"><div class="fila-nombre">${esc(u.nombre)}${u.rol === 'admin' ? ' · admin' : ''}</div><div class="fila-meta">${esc(u.email)} · ${esc(u.empresa)}</div></div>
+        ${u.id === sesion.user.id ? '' : `<button class="chip ${u.bloqueado ? 'on' : ''}" data-bloq="${u.id}" data-v="${u.bloqueado ? 0 : 1}">${u.bloqueado ? 'Bloqueado' : 'Bloquear'}</button>`}</div>`).join('')}</div>
+        <div class="ayuda">Un usuario bloqueado no puede entrar ni ver nada. Sus valoraciones se conservan.</div>`;
+      z.querySelectorAll('[data-bloq]').forEach((b) => b.onclick = async () => {
+        const v = b.dataset.v === '1';
+        if (v && !await confirmar('¿Bloquear a este usuario?', 'No podrá entrar en Contacta.', 'Bloquear', true)) return;
+        const { error } = await sb.from('usuarios').update({ bloqueado: v }).eq('id', b.dataset.bloq);
+        if (error) return aviso(error.message, false); await cargarDatos(); pintarAdmin(el);
+      });
+    } else if (pestana === 'historial') {
+      z.innerHTML = '<div class="ayuda">Cargando…</div>';
+      const { data, error } = await sb.from('historial').select('*').not('usuario_id', 'is', null).order('created_at', { ascending: false }).limit(150);
+      if (error) { z.innerHTML = `<div class="error-txt">${esc(error.message)}</div>`; return; }
+      const verbo = { insert: 'añadió', update: 'editó', delete: 'borró', eliminar: 'eliminó', restaurar: 'restauró' };
+      const filas = data.filter((h) => h.usuario_id); // los cambios sin usuario son de la importación inicial
+      z.innerHTML = `<div class="seccion"><span class="etiqueta-sec">Últimos cambios</span></div><div class="tarjeta">${filas.map((h) => {
+        const reg = h.despues || h.antes || {}; let que = '';
+        if (h.tabla === 'proveedores') que = `«${esc(reg.nombre)}»`;
+        else if (h.tabla === 'valoraciones') que = `una valoración (${reg.estrellas}★) de «${esc((IDX.porId.get(reg.proveedor_id) || {}).nombre || 'proveedor')}»`;
+        else if (h.tabla === 'proveedor_oficios') que = `${h.accion === 'insert' ? 'el oficio' : 'el oficio'} ${esc((IDX.of.get(reg.oficio_id) || {}).nombre || '')} de «${esc((IDX.porId.get(reg.proveedor_id) || {}).nombre || '')}»`;
+        else if (h.tabla === 'oficios') que = `el oficio «${esc(reg.nombre)}»`;
+        const v = h.tabla === 'proveedor_oficios' ? (h.accion === 'insert' ? 'añadió' : 'quitó') : verbo[h.accion] || h.accion;
+        const deshacer = h.tabla === 'proveedores' && ['update', 'eliminar', 'restaurar'].includes(h.accion) && h.antes;
+        return `<div class="fila"><div class="fila-txt hist" style="white-space:normal"><div><b>${esc(nombreUsuario(h.usuario_id, 'Sistema'))}</b> ${v} ${que}</div><div>${hace(h.created_at)}</div></div>${deshacer ? `<button class="chip" data-desh="${h.id}">Deshacer</button>` : ''}</div>`;
+      }).join('') || '<div class="texto-bloque">Sin cambios todavía.</div>'}</div>`;
+      z.querySelectorAll('[data-desh]').forEach((b) => b.onclick = async () => {
+        const h = data.find((x) => String(x.id) === b.dataset.desh); const a = h.antes;
+        if (!await confirmar('¿Deshacer este cambio?', `La ficha «${esc(a.nombre)}» volverá a como estaba antes.`, 'Deshacer')) return;
+        const campos = ['nombre', 'cif', 'personas', 'moviles', 'fijos', 'emails', 'web', 'poblacion', 'provincia', 'notas', 'recomendado_por', 'estado', 'sin_verificar', 'eliminado_en', 'motivo_eliminacion'];
+        const fila = {}; campos.forEach((c) => { fila[c] = a[c]; });
+        const { error: e2 } = await sb.from('proveedores').update(fila).eq('id', a.id);
+        if (e2) return aviso(e2.message, false); aviso('Cambio deshecho'); await cargarDatos(); pintarAdmin(el);
+      });
+    } else {
+      const total = vivos().length; const sinv = vivos().filter((p) => p.sin_verificar).length; const trab = vivos().filter((p) => p._trab).length;
+      z.innerHTML = `<div class="seccion"><span class="etiqueta-sec">Resumen</span></div><div class="tarjeta">
+        ${[['Proveedores', total], ['Trabajado con nosotros', trab], ['Sin verificar', sinv], ['Cerrados', vivos().filter((p) => p.estado === 'inactivo').length], ['Valoraciones', D.vals.length], ['Oficios', oficiosVivos().length], ['Usuarios', D.usuarios.length]].map(([k, v]) => `<div class="dato"><div class="dato-txt"><span class="k">${k}</span><span class="v">${v}</span></div></div>`).join('')}</div>
+        <div style="margin:14px 20px 0"><button class="btn-blanco" id="exp">${ico('copiar', 18, '#575049')}Copiar todos los proveedores (para Excel)</button></div>
+        <div class="ayuda">Copia la base entera con todas las columnas para pegarla en un Excel de copia de seguridad.</div>`;
+      z.querySelector('#exp').onclick = async (e) => {
+        const cab = ['ID', 'EMPRESA', 'OFICIOS', 'PERSONA', 'MÓVIL', 'FIJO', 'EMAIL', 'WEB', 'POBLACIÓN', 'PROVINCIA', 'CIF', 'NOTAS', 'ESTADO', 'SIN VERIFICAR', 'VALORACIÓN', 'Nº VALORACIONES'];
+        const filas = vivos().map((p) => [p.id, p.nombre, p._ofs.map((o) => o.nombre).join('; '), p.personas, p.moviles, p.fijos, p.emails, p.web, p.poblacion, p.provincia, p.cif, p.notas, p.estado, p.sin_verificar ? 'sí' : 'no', p._n ? p._media.toFixed(1) : '', p._n]);
+        const txt = [cab, ...filas].map((f) => f.map((c) => String(c == null ? '' : c).replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
+        if (await copiarTexto(txt)) { marcarCopiado(e.currentTarget, true); aviso(`${filas.length} proveedores copiados`); }
+      };
+    }
+  }
+  function fusionarOficio(srcId, despues) {
+    const src = IDX.of.get(srcId);
+    const opciones = oficiosVivos().filter((o) => o.id !== srcId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((o) => `<option value="${o.id}">${esc(o.nombre)}</option>`).join('');
+    abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Fusionar oficio</div><button class="btn-texto fuerte" id="fu-ok">Fusionar</button></div>
+      <p>«${esc(src.nombre)}» pasará a ser un sinónimo del oficio que elijas, y sus proveedores se moverán allí.</p>
+      <div class="form-grupo"><div class="campo"><label for="fu-d">Con</label><select id="fu-d">${opciones}</select></div></div>`, (h) => {
+      h.querySelector('[data-c]').onclick = cerrarHoja;
+      h.querySelector('#fu-ok').onclick = async () => {
+        const dst = IDX.of.get(Number(h.querySelector('#fu-d').value));
+        const provs = D.links.filter((l) => l.oficio_id === srcId).map((l) => l.proveedor_id);
+        const ya = new Set(D.links.filter((l) => l.oficio_id === dst.id).map((l) => l.proveedor_id));
+        const nuevos = provs.filter((p) => !ya.has(p)).map((p) => ({ proveedor_id: p, oficio_id: dst.id }));
+        let r;
+        if (nuevos.length) { r = await sb.from('proveedor_oficios').insert(nuevos); if (r.error) return aviso(r.error.message, false); }
+        if (provs.length) { r = await sb.from('proveedor_oficios').delete().eq('oficio_id', srcId); if (r.error) return aviso(r.error.message, false); }
+        r = await sb.from('oficios').update({ sinonimos: [...new Set([...(dst.sinonimos || []), src.nombre, ...(src.sinonimos || [])])] }).eq('id', dst.id); if (r.error) return aviso(r.error.message, false);
+        r = await sb.from('oficios').update({ redirige_a: dst.id, nuevo: false }).eq('id', srcId); if (r.error) return aviso(r.error.message, false);
+        cerrarHoja(); aviso('Oficio fusionado'); await cargarDatos(); despues();
+      };
+    });
+  }
+
+  iniciar();
+})();

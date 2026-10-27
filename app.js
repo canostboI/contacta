@@ -286,6 +286,7 @@
     });
     if (sesion) arrancarDatos(); else pintar();
     window.addEventListener('hashchange', pintar);
+    programarSaludo();
     window.addEventListener('online', () => { pintar(); refrescar(); });
     window.addEventListener('offline', pintar);
     let anchoPrev = ancho();
@@ -302,6 +303,27 @@
     if (yo && yo.bloqueado) { await sb.auth.signOut(); aviso('Tu cuenta está bloqueada. Habla con el administrador.', false); return; }
     pintar();
   }
+
+  /* ---------------- Saludo de los logos (cada 2-3 minutos) ---------------- */
+  // Un pequeño gesto de los logos de la cabecera para que la herramienta se sienta viva
+  function programarSaludo() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const espera = (120 + Math.random() * 60) * 1000;
+    setTimeout(() => { if (document.visibilityState === 'visible') saludarLogos(); programarSaludo(); }, espera);
+  }
+  function saludarLogos() {
+    const tipos = ['salto', 'balanceo', 'latido'];
+    const tipo = tipos[Math.floor(Math.random() * tipos.length)];
+    const els = [...document.querySelectorAll('.logos-mini img, .logo-cab, .barra-inicio .marca')];
+    els.forEach((el, i) => {
+      el.classList.remove('saludo-salto', 'saludo-balanceo', 'saludo-latido');
+      void el.offsetWidth; // reinicia la animación
+      el.style.animationDelay = (i * 0.12) + 's';
+      el.classList.add('saludo-' + tipo);
+      el.addEventListener('animationend', () => { el.classList.remove('saludo-' + tipo); el.style.animationDelay = ''; }, { once: true });
+    });
+  }
+  window.contactaSaludo = saludarLogos; // para probarlo desde la consola
 
   /* ---------------- Portada animada ---------------- */
   function portadaSiToca() {

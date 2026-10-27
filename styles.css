@@ -364,3 +364,12 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 @keyframes p-brillo { 0% { filter: drop-shadow(0 0 0 rgba(0, 135, 154, 0)); } 45% { filter: drop-shadow(0 0 18px rgba(0, 135, 154, .28)); } 100% { filter: drop-shadow(0 4px 12px rgba(20, 30, 40, .10)); } }
 @keyframes p-sube2 { to { transform: translateY(0); opacity: 1; } }
 @keyframes p-ancho2 { to { width: 64px; } }
+/* ---------- v1.9: logos de empresa en color y saludo cada 2-3 minutos ---------- */
+.logos-mini img { filter: none; opacity: 1; }
+.saludo-salto { animation: saludo-salto .7s cubic-bezier(.3, 1.6, .5, 1) both; }
+.saludo-balanceo { animation: saludo-balanceo .9s ease-in-out both; transform-origin: 50% 80%; }
+.saludo-latido { animation: saludo-latido .6s ease-in-out both; }
+@keyframes saludo-salto { 0%, 100% { transform: translateY(0); } 35% { transform: translateY(-7px) scale(1.06); } 60% { transform: translateY(1px) scale(.98); } }
+@keyframes saludo-balanceo { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-6deg); } 45% { transform: rotate(5deg); } 70% { transform: rotate(-3deg); } }
+@keyframes saludo-latido { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.12); } 70% { transform: scale(.97); } }
+@media (prefers-reduced-motion: reduce) { .saludo-salto, .saludo-balanceo, .saludo-latido { animation: none; } }

@@ -302,3 +302,35 @@ svg { flex-shrink: 0; }
 #portada .p-palabra { display: block; height: 88px; width: auto; }
 #portada .p-linea { background: linear-gradient(90deg, var(--marca-azul), var(--marca-oliva), var(--marca-coral)); }
 @media (min-width: 700px) { .logo-cab { height: 70px; } }
+
+/* =====================================================================
+   v1.7.1 — Fondo blanco con toques de color de la marca
+   ===================================================================== */
+:root {
+  --fondo: #FFFFFF;
+  --blanco: #FFFFFF;
+  --campo: #F2F4F6;
+  --suave: #F2F4F6;
+  --linea: #E7EAEE;
+  --acento: #00879A;          /* turquesa de la marca, oscurecido para leer texto blanco */
+  --acento-suave: #E3F8FA;
+  --sombra: 0 1px 2px rgba(20, 30, 40, .06);
+}
+/* Franja fina con los colores de la marca arriba del todo */
+body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 4px; z-index: 40; background: linear-gradient(90deg, var(--marca-oliva), var(--marca-azul) 35%, var(--marca-azul-osc) 65%, var(--marca-coral)); }
+/* Tarjetas sobre blanco: borde fino */
+.tarjeta, .cat, .form-grupo, .accion:not(.rojo), .btn-blanco, .oficios .chip:not(.on), .caja-busca { border: 1px solid var(--linea); }
+.columna .fila:hover, .fila.activa { background: #F8FAFB; }
+/* Botones y elementos activos en turquesa */
+.btn-anadir, .btn-lleno, .chip.on, .sel-chip.on, .oficios .chip.on { background: var(--acento); color: #fff; }
+.btn-anadir:hover, .btn-lleno:hover { filter: brightness(1.08); }
+.caja-busca:focus-within { border-color: var(--acento); box-shadow: 0 0 0 3px var(--acento-suave); }
+.cat:hover { border-color: #BDE9EE; }
+.cat.resalta { box-shadow: 0 0 0 2px var(--acento); }
+.rueda-sel { background: var(--acento-suave); box-shadow: none; }
+.rueda-item.sel { color: #00606E; }
+.seccion-cab .copiar-todos, .volver { color: var(--acento); }
+.btn-valorar { border-color: #BDE9EE; color: #00606E; }
+.btn-valorar:hover { background: var(--acento-suave); }
+.acceso { background: var(--fondo); }
+.acceso-caja .form-grupo { background: var(--campo); }

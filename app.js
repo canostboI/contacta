@@ -570,7 +570,7 @@
     const grupos = elegidos.map((o) => ({ titulo: o.nombre, fam: f.nombre, items: base.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
     z.innerHTML = `
       <div class="cat-cab">
-        <a class="volver" href="#/">${ico('atras', 18, '#575049', 2.2)}Categorías</a>
+        <a class="volver" href="#/">${ico('atras', 18, '#00879A', 2.2)}Categorías</a>
         <div class="cat-titulo"><span class="cat-ico" style="background:${bg}">${icoFam(f.nombre, 26, fg)}</span><h2>${esc(f.nombre)}</h2></div>
       </div>
       <div class="oficios">
@@ -631,13 +631,13 @@
   function gruposHTML(grupos) {
     return grupos.map((g, gi) => `
       <div class="seccion-cab"><h2>${esc(g.titulo)}</h2><span>${g.items.length}</span>
-        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#575049')}<span>Copiar todos</span></button></div>
+        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#00879A')}<span>Copiar todos</span></button></div>
       <div class="tarjeta">${g.items.map((p) => filaHTML(p, g.fam)).join('')}</div>`).join('');
   }
   function engancharGrupos(z, grupos) {
     z.querySelectorAll('.copiar-todos').forEach((b) => b.onclick = async () => {
       const g = grupos[Number(b.dataset.g)];
-      if (await copiarProveedores(g.items)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#575049') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.items.length} proveedores copiados. Pégalos en el comparativo.`); }
+      if (await copiarProveedores(g.items)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#00879A') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.items.length} proveedores copiados. Pégalos en el comparativo.`); }
     });
     engancharFilas(z);
   }

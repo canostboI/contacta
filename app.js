@@ -434,12 +434,12 @@
   function irInicio() {
     E.q = ''; E.limite = 60; E.rueda = 0;
     const inp = document.getElementById('q'); if (inp) { inp.value = ''; const xb = document.getElementById('q-x'); if (xb) xb.hidden = true; }
-    if (location.hash && location.hash !== '#/' && location.hash !== '#') ir('#/'); else pintar();
+    if (location.hash && location.hash !== '#/' && location.hash !== '#') ir('#/'); else pintarResultados();
     window.scrollTo(0, 0);
   }
 
   /* ---------------- Buscador ---------------- */
-  const E = { q: '', fam: 0, of: 0, rueda: 0, soloTrab: false, verInact: false, limite: 60 };
+  const E = { q: '', fam: 0, of: 0, rueda: 0, prov: '', orden: 'rec', soloTrab: false, verInact: false, limite: 60 };
   function familiasOrden() { return D.familias.slice().sort((a, b) => a.orden - b.orden); }
   function oficiosDeFam(famId) { return oficiosVivos().filter((o) => o.familia_id === famId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')); }
 
@@ -474,6 +474,10 @@
         <div class="filtros">
           <button class="chip ${E.soloTrab ? 'on' : ''}" id="f-trab" aria-pressed="${E.soloTrab}">Trabajado con nosotros</button>
           <button class="chip ${E.verInact ? 'on' : ''}" id="f-inact" aria-pressed="${E.verInact}">Ver cerrados</button>
+          <label class="sel-chip ${E.prov ? 'on' : ''}" title="Filtrar por provincia"><span class="oculto-vis">Provincia</span>
+            <select id="f-prov"><option value="">Todas las provincias</option>${provincias().map((x) => `<option value="${esc(x.k)}" ${E.prov === x.k ? 'selected' : ''}>${esc(x.n)} (${x.c})</option>`).join('')}</select></label>
+          <label class="sel-chip ${E.orden !== 'rec' ? 'on' : ''}" title="Ordenar la lista"><span class="oculto-vis">Ordenar</span>
+            <select id="f-orden"><option value="rec" ${E.orden === 'rec' ? 'selected' : ''}>Orden: recomendados</option><option value="est" ${E.orden === 'est' ? 'selected' : ''}>Orden: más estrellas</option><option value="az" ${E.orden === 'az' ? 'selected' : ''}>Orden: nombre A-Z</option></select></label>
         </div>
         ${offline ? `<div class="aviso-offline">Sin conexión: estás viendo los datos guardados. Para añadir o editar hace falta conexión.</div>` : ''}
       </header>
@@ -485,6 +489,8 @@
     inp.onkeydown = (e) => { if (e.key === 'Escape') { inp.value = ''; alEscribir(); } };
     xb.onclick = () => { inp.value = ''; E.q = ''; xb.hidden = true; pintarResultados(); inp.focus(); };
     el.querySelector('#f-trab').onclick = (e) => { E.soloTrab = !E.soloTrab; e.currentTarget.classList.toggle('on', E.soloTrab); e.currentTarget.setAttribute('aria-pressed', E.soloTrab); pintarResultados(); };
+    el.querySelector('#f-prov').onchange = (e) => { E.prov = e.target.value; e.target.parentElement.classList.toggle('on', !!E.prov); pintarResultados(); };
+    el.querySelector('#f-orden').onchange = (e) => { E.orden = e.target.value; e.target.parentElement.classList.toggle('on', E.orden !== 'rec'); pintarResultados(); };
     el.querySelector('#f-inact').onclick = (e) => { E.verInact = !E.verInact; e.currentTarget.classList.toggle('on', E.verInact); e.currentTarget.setAttribute('aria-pressed', E.verInact); pintarResultados(); };
     el.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => { e.preventDefault(); irInicio(); });
     pintarResultados();
@@ -494,9 +500,21 @@
   function listaFiltrada() {
     let l = D.prov.filter((p) => !p.eliminado_en && (E.verInact || p.estado === 'activo'));
     if (E.soloTrab) l = l.filter((p) => p._trab);
+    if (E.prov) l = l.filter((p) => norm(p.provincia) === E.prov);
     return l;
   }
-  const ordenProv = (a, b) => (b._trab - a._trab) || (b._media - a._media) || a.nombre.localeCompare(b.nombre, 'es');
+  // Provincias que hay en la base (sin distinguir mayúsculas ni acentos), de más a menos proveedores
+  function provincias() {
+    const m = new Map();
+    D.prov.forEach((p) => { if (p.eliminado_en || !p.provincia) return; const k = norm(p.provincia); if (!k) return;
+      if (!m.has(k)) m.set(k, { k, n: p.provincia.trim().toLowerCase().replace(/(^|[\s\-\/'·])(\p{L})/gu, (s, a, b) => a + b.toUpperCase()), c: 0 }); m.get(k).c++; });
+    return [...m.values()].sort((a, b) => b.c - a.c || a.n.localeCompare(b.n, 'es'));
+  }
+  const ordenProv = (a, b) => {
+    if (E.orden === 'est') return (b._media - a._media) || (b._n - a._n) || a.nombre.localeCompare(b.nombre, 'es');
+    if (E.orden === 'az') return a.nombre.localeCompare(b.nombre, 'es');
+    return (b._trab - a._trab) || (b._media - a._media) || a.nombre.localeCompare(b.nombre, 'es');
+  };
   function cuentas(base) {
     const porOf = new Map(); const porFam = new Map();
     base.forEach((p) => {
@@ -569,6 +587,7 @@
     const deCat = base.filter((p) => p._ofs.some((o) => idsOf.has(o.id)));
     const setCat = new Set(deCat.map((p) => p.id));
     const otros = res.filter((p) => !setCat.has(p.id));
+    if (E.orden !== 'rec') otros.sort(ordenProv);
     const grupos = ofsHit.map((o) => ({ titulo: o.nombre, fam: (IDX.fam.get(o.familia_id) || {}).nombre, items: deCat.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
     const vistaOtros = otros.slice(0, E.limite);
     if (!famsHit.length && !ofsHit.length && !otros.length) {

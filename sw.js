@@ -1,6 +1,6 @@
 // Service worker de Contacta: guarda la app para que abra sin conexión.
 // Los datos de proveedores los guarda la propia app (localStorage), no este archivo.
-const CACHE = 'contacta-v1.4.0';
+const CACHE = 'contacta-v1.5.0';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './config.js', './manifest.webmanifest',
   './img.js', './icon.svg',
@@ -21,7 +21,7 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || url.hostname.endsWith('supabase.co')) return; // datos: siempre a la red
   // App: primero la red (para coger versiones nuevas) y, si no hay, la copia guardada.
   e.respondWith(
-    fetch(e.request).then((r) => {
+    fetch(e.request, { cache: 'no-cache' }).then((r) => { // no-cache: pregunta siempre si hay versión nueva
       if (r.ok && (url.origin === location.origin || url.hostname === 'cdn.jsdelivr.net')) {
         const copy = r.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy));
       }

@@ -282,3 +282,9 @@ svg { flex-shrink: 0; }
 .btn-valorar { border: 1px solid var(--linea); background: var(--blanco); border-radius: 16px; min-height: 34px; padding: 0 12px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; }
 .btn-valorar:hover { background: var(--suave); }
 .btn-valorar { white-space: nowrap; }
+/* ---------- v1.5: provincia y orden ---------- */
+.sel-chip { position: relative; display: inline-flex; align-items: center; border-radius: 16px; min-height: 32px; background: var(--campo); font-size: 14px; font-weight: 500; }
+.sel-chip.on { background: var(--tinta); color: #fff; }
+.sel-chip select { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: inherit; font: inherit; padding: 0 28px 0 12px; min-height: 32px; cursor: pointer; outline: none; max-width: 230px; }
+.sel-chip::after { content: ''; position: absolute; right: 12px; top: 50%; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+.sel-chip select option { color: var(--tinta); }

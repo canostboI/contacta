@@ -374,3 +374,22 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 @keyframes saludo-latido { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.12); } 70% { transform: scale(.97); } }
 @media (prefers-reduced-motion: reduce) { .saludo-salto, .saludo-balanceo, .saludo-latido { animation: none; } }
 .logo-acceso { height: 64px; }
+/* ---------- v1.9.2: cabecera centrada y RECOP alineado por sus letras ---------- */
+.cab-fila { display: grid; grid-template-columns: 1fr auto 1fr; }
+.cab-fila > .logos-mini { grid-column: 2; justify-self: center; }
+.cab-fila > div { grid-column: 3; justify-self: end; }
+.logo-titulo .a-inicio { display: block; width: fit-content; margin: 0 auto; }
+.logo-cab { margin-left: 0; }
+.barra-inicio { text-align: center; }
+/* RECOP lleva una franja debajo: lo bajamos para que sus letras queden a la altura de las otras */
+.logos-mini img[alt="RECOP"] { position: relative; top: 3px; }
+@media (max-width: 699px) {
+  .cab-fila { grid-template-columns: 52px 1fr auto; }
+  .cab-fila > .logos-mini { justify-self: center; }
+}
+@media (max-width: 699px) {
+  .cab-fila { grid-template-columns: 1fr auto; row-gap: 6px; }
+  .cab-fila > .cab-hueco { display: none; }
+  .cab-fila > div { grid-column: 2; grid-row: 1; }
+  .cab-fila > .logos-mini { grid-column: 1 / -1; grid-row: 2; justify-self: center; overflow: visible; }
+}

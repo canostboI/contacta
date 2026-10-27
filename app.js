@@ -528,6 +528,7 @@
     el.innerHTML = `
       <header class="cabecera">
         <div class="cab-fila">
+          <span class="cab-hueco" aria-hidden="true"></span>
           <a class="logos-mini a-inicio" href="#/" title="Ir al inicio"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:12px"><img src="${IMG.recop}" alt="RECOP" style="height:18px"><img src="${IMG.munne}" alt="Munné" style="height:15px"></a>
           <div style="display:flex;gap:4px;align-items:center">
             ${esAdmin() ? `<a class="btn-redondo" href="#/admin" aria-label="Administración" title="Administración">${ico('ajustes', 20, '#736A63', 1.8)}</a>` : `<a class="btn-redondo" href="#/cuenta" aria-label="Mi cuenta" title="Mi cuenta">${ico('salir', 20, '#736A63', 1.8)}</a>`}

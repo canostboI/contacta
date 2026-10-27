@@ -425,10 +425,21 @@
     $app.innerHTML = `<div class="columna" id="pl"></div>`;
     pintarBuscador(document.getElementById('pl'));
   }
-  function pantallaSimple(fn) { $app.innerHTML = `<div class="pantalla" id="ps"></div>`; fn(document.getElementById('ps')); window.scrollTo(0, 0); }
+  function pantallaSimple(fn) {
+    $app.innerHTML = `<div class="barra-inicio"><a class="a-inicio" href="#/" title="Ir al inicio"><span class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:11px"><img src="${IMG.recop}" alt="RECOP" style="height:16px"><img src="${IMG.munne}" alt="Munné" style="height:13px"></span><span class="marca">Contacta</span></a></div><div class="pantalla" id="ps"></div>`;
+    $app.querySelector('.a-inicio').onclick = (e) => { e.preventDefault(); irInicio(); };
+    fn(document.getElementById('ps')); window.scrollTo(0, 0);
+  }
+  // Vuelve al inicio de todo: sin búsqueda ni categoría, rueda arriba
+  function irInicio() {
+    E.q = ''; E.limite = 60;
+    const inp = document.getElementById('q'); if (inp) { inp.value = ''; const xb = document.getElementById('q-x'); if (xb) xb.hidden = true; }
+    if (location.hash && location.hash !== '#/' && location.hash !== '#') ir('#/'); else pintar();
+    window.scrollTo(0, 0);
+  }
 
   /* ---------------- Buscador ---------------- */
-  const E = { q: '', fam: 0, of: 0, soloTrab: false, verInact: false, limite: 60 };
+  const E = { q: '', fam: 0, of: 0, rueda: 0, soloTrab: false, verInact: false, limite: 60 };
   function familiasOrden() { return D.familias.slice().sort((a, b) => a.orden - b.orden); }
   function oficiosDeFam(famId) { return oficiosVivos().filter((o) => o.familia_id === famId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')); }
 
@@ -445,14 +456,14 @@
     el.innerHTML = `
       <header class="cabecera">
         <div class="cab-fila">
-          <div class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:12px"><img src="${IMG.recop}" alt="RECOP" style="height:18px"><img src="${IMG.munne}" alt="Munné" style="height:15px"></div>
+          <a class="logos-mini a-inicio" href="#/" title="Ir al inicio"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:12px"><img src="${IMG.recop}" alt="RECOP" style="height:18px"><img src="${IMG.munne}" alt="Munné" style="height:15px"></a>
           <div style="display:flex;gap:4px;align-items:center">
-            ${esAdmin() ? `<a class="btn-redondo" href="#/admin" aria-label="Administración">${ico('ajustes', 20, '#736A63', 1.8)}</a>` : `<a class="btn-redondo" href="#/cuenta" aria-label="Mi cuenta">${ico('salir', 20, '#736A63', 1.8)}</a>`}
-            <a class="btn-redondo" href="#/papelera" aria-label="Papelera">${ico('papelera', 20, '#736A63', 1.8)}</a>
-            <a class="btn-anadir" href="#/alta" aria-label="Añadir proveedor">${ico('mas', 18, '#fff', 2.4)}<span>Añadir</span></a>
+            ${esAdmin() ? `<a class="btn-redondo" href="#/admin" aria-label="Administración" title="Administración">${ico('ajustes', 20, '#736A63', 1.8)}</a>` : `<a class="btn-redondo" href="#/cuenta" aria-label="Mi cuenta" title="Mi cuenta">${ico('salir', 20, '#736A63', 1.8)}</a>`}
+            <a class="btn-redondo" href="#/papelera" aria-label="Papelera" title="Papelera">${ico('papelera', 20, '#736A63', 1.8)}</a>
+            <a class="btn-anadir" href="#/alta" aria-label="Añadir proveedor" title="Añadir proveedor">${ico('mas', 18, '#fff', 2.4)}<span>Añadir</span></a>
           </div>
         </div>
-        <h1 class="titulo">Contacta</h1>
+        <h1 class="titulo"><a class="a-inicio" href="#/" title="Ir al inicio">Contacta</a></h1>
         <div class="buscador">
           <div class="caja-busca">${ico('buscar', 20, '#736A63', 2.2)}
             <label for="q" class="oculto-vis">Buscar</label>
@@ -475,6 +486,7 @@
     xb.onclick = () => { inp.value = ''; E.q = ''; xb.hidden = true; pintarResultados(); inp.focus(); };
     el.querySelector('#f-trab').onclick = (e) => { E.soloTrab = !E.soloTrab; e.currentTarget.classList.toggle('on', E.soloTrab); e.currentTarget.setAttribute('aria-pressed', E.soloTrab); pintarResultados(); };
     el.querySelector('#f-inact').onclick = (e) => { E.verInact = !E.verInact; e.currentTarget.classList.toggle('on', E.verInact); e.currentTarget.setAttribute('aria-pressed', E.verInact); pintarResultados(); };
+    el.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => { e.preventDefault(); irInicio(); });
     pintarResultados();
     if (ancho() && !E.fam) setTimeout(() => inp.focus({ preventScroll: true }), 50);
   }
@@ -501,14 +513,30 @@
     const C = cuentas(base);
     if (E.q.trim()) return pintarBusqueda(z, base, C);
     if (E.fam && IDX.fam.get(E.fam)) return pintarCategoria(z, base, C);
-    // Inicio: rejilla de categorías
+    // Inicio: rueda de familias (atajo) + todas las fichas de oficios, sin agrupar
     const fams = familiasOrden();
-    z.innerHTML = `<div class="seccion-cab"><h2>Categorías</h2><span>${base.length} proveedores</span></div>
-      <div class="rejilla">${fams.map((f) => {
-        const [bg, fg] = tono(f.nombre);
-        return `<a class="cat" href="#/f/${f.id}"><span class="cat-ico" style="background:${bg}">${icoFam(f.nombre, 24, fg)}</span>
-          <span class="cat-nombre">${esc(f.nombre)}</span><span class="cat-n">${C.porFam.get(f.id) || 0}</span></a>`;
+    E.rueda = Math.min(E.rueda, Math.max(0, fams.length - 1));
+    const ofs = [];
+    fams.forEach((f) => oficiosDeFam(f.id).forEach((o) => ofs.push({ o, f })));
+    z.innerHTML = `<div class="rueda-cab"><span class="etiqueta-sec">Familias · ${fams.length}</span><span style="font-size:13px;color:var(--sec)">Toca la del centro para ir a sus oficios</span></div><div id="rueda"></div>
+      <div class="seccion-cab"><h2>Oficios</h2><span>${ofs.length}</span></div>
+      <div class="rejilla">${ofs.map(({ o, f }) => {
+        const [bg, fg] = tono(f.nombre); const n = C.porOf.get(o.id) || 0;
+        return `<a class="cat ${n ? '' : 'cero'}" href="#/f/${f.id}/${o.id}" data-fam="${f.id}" title="${esc(f.nombre)}"><span class="cat-ico" style="background:${bg}">${icoFam(f.nombre, 24, fg)}</span>
+          <span class="cat-nombre">${esc(o.nombre)}</span><span class="cat-n">${n} proveedor${n === 1 ? '' : 'es'}</span></a>`;
       }).join('')}</div><div style="height:32px"></div>`;
+    const resaltar = (i, saltar) => {
+      const f = fams[i]; if (!f) return;
+      const tiles = [...z.querySelectorAll('.cat')];
+      tiles.forEach((c) => c.classList.toggle('resalta', Number(c.dataset.fam) === f.id));
+      if (saltar) { const pri = tiles.find((c) => Number(c.dataset.fam) === f.id); if (pri) window.scrollTo({ top: pri.getBoundingClientRect().top + window.scrollY - 90, behavior: 'smooth' }); }
+    };
+    if (fams.length) {
+      montarRueda(z.querySelector('#rueda'), fams.map((x) => ({ label: x.nombre, icon: icoFam(x.nombre, 20, '#575049'), chev: true })), E.rueda, true,
+        (i) => { E.rueda = i; resaltar(i, false); },
+        (i) => { E.rueda = i; resaltar(i, true); });
+      resaltar(E.rueda, false);
+    }
   }
 
   function pintarCategoria(z, base, C) {

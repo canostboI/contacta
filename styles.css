@@ -254,3 +254,14 @@ svg { flex-shrink: 0; }
   .rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .columna { overflow-x: hidden; }
+/* ---------- v1.2: rueda + oficios, ir al inicio ---------- */
+.a-inicio { cursor: pointer; }
+.titulo .a-inicio { color: inherit; }
+.barra-inicio { max-width: 760px; margin: 0 auto; padding: calc(10px + env(safe-area-inset-top)) 20px 0; }
+.barra-inicio .a-inicio { display: inline-flex; align-items: center; gap: 14px; min-height: 40px; }
+.barra-inicio .marca { font-size: 18px; font-weight: 700; letter-spacing: -.3px; color: var(--tinta-fuerte); }
+.barra-inicio + .pantalla .barra-nav { padding-top: 0; }
+.cat.cero { opacity: .55; }
+.cat.resalta { box-shadow: 0 0 0 2px var(--tinta), var(--sombra); }
+.columna .rueda-cab { padding-top: 18px; }
+@media (min-width: 700px) { .columna .rueda-cab { padding-left: 44px; padding-right: 28px; } .columna .rueda-sel { left: 28px; right: 28px; } }

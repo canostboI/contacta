@@ -471,14 +471,6 @@
             <button class="borrar-busca" id="q-x" aria-label="Borrar búsqueda" ${E.q ? '' : 'hidden'}>${ico('x', 12, '#fff', 3)}</button>
           </div>
         </div>
-        <div class="filtros">
-          <button class="chip ${E.soloTrab ? 'on' : ''}" id="f-trab" aria-pressed="${E.soloTrab}">Trabajado con nosotros</button>
-          <button class="chip ${E.verInact ? 'on' : ''}" id="f-inact" aria-pressed="${E.verInact}">Ver cerrados</button>
-          <label class="sel-chip ${E.prov ? 'on' : ''}" title="Filtrar por provincia"><span class="oculto-vis">Provincia</span>
-            <select id="f-prov"><option value="">Todas las provincias</option>${provincias().map((x) => `<option value="${esc(x.k)}" ${E.prov === x.k ? 'selected' : ''}>${esc(x.n)} (${x.c})</option>`).join('')}</select></label>
-          <label class="sel-chip ${E.orden !== 'rec' ? 'on' : ''}" title="Ordenar la lista"><span class="oculto-vis">Ordenar</span>
-            <select id="f-orden"><option value="rec" ${E.orden === 'rec' ? 'selected' : ''}>Orden: recomendados</option><option value="est" ${E.orden === 'est' ? 'selected' : ''}>Orden: más estrellas</option><option value="az" ${E.orden === 'az' ? 'selected' : ''}>Orden: nombre A-Z</option></select></label>
-        </div>
         ${offline ? `<div class="aviso-offline">Sin conexión: estás viendo los datos guardados. Para añadir o editar hace falta conexión.</div>` : ''}
       </header>
       <div id="resultados"></div>`;
@@ -488,15 +480,28 @@
     inp.oninput = alEscribir;
     inp.onkeydown = (e) => { if (e.key === 'Escape') { inp.value = ''; alEscribir(); } };
     xb.onclick = () => { inp.value = ''; E.q = ''; xb.hidden = true; pintarResultados(); inp.focus(); };
-    el.querySelector('#f-trab').onclick = (e) => { E.soloTrab = !E.soloTrab; e.currentTarget.classList.toggle('on', E.soloTrab); e.currentTarget.setAttribute('aria-pressed', E.soloTrab); pintarResultados(); };
-    el.querySelector('#f-prov').onchange = (e) => { E.prov = e.target.value; e.target.parentElement.classList.toggle('on', !!E.prov); pintarResultados(); };
-    el.querySelector('#f-orden').onchange = (e) => { E.orden = e.target.value; e.target.parentElement.classList.toggle('on', E.orden !== 'rec'); pintarResultados(); };
-    el.querySelector('#f-inact').onclick = (e) => { E.verInact = !E.verInact; e.currentTarget.classList.toggle('on', E.verInact); e.currentTarget.setAttribute('aria-pressed', E.verInact); pintarResultados(); };
     el.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => { e.preventDefault(); irInicio(); });
     pintarResultados();
     if (ancho() && !E.fam) setTimeout(() => inp.focus({ preventScroll: true }), 50);
   }
 
+  function filtrosHTML() {
+    return `<div class="filtros">
+          <button class="chip ${E.soloTrab ? 'on' : ''}" id="f-trab" aria-pressed="${E.soloTrab}">Trabajado con nosotros</button>
+          <button class="chip ${E.verInact ? 'on' : ''}" id="f-inact" aria-pressed="${E.verInact}">Ver cerrados</button>
+          <label class="sel-chip ${E.prov ? 'on' : ''}" title="Filtrar por provincia"><span class="oculto-vis">Provincia</span>
+            <select id="f-prov"><option value="">Todas las provincias</option>${provincias().map((x) => `<option value="${esc(x.k)}" ${E.prov === x.k ? 'selected' : ''}>${esc(x.n)} (${x.c})</option>`).join('')}</select></label>
+          <label class="sel-chip ${E.orden !== 'rec' ? 'on' : ''}" title="Ordenar la lista"><span class="oculto-vis">Ordenar</span>
+            <select id="f-orden"><option value="rec" ${E.orden === 'rec' ? 'selected' : ''}>Orden: recomendados</option><option value="est" ${E.orden === 'est' ? 'selected' : ''}>Orden: más estrellas</option><option value="az" ${E.orden === 'az' ? 'selected' : ''}>Orden: nombre A-Z</option></select></label>
+        </div>`;
+  }
+  function engancharFiltros(z) {
+    const q = (s) => z.querySelector(s); if (!q('#f-trab')) return;
+    q('#f-trab').onclick = () => { E.soloTrab = !E.soloTrab; pintarResultados(); };
+    q('#f-inact').onclick = () => { E.verInact = !E.verInact; pintarResultados(); };
+    q('#f-prov').onchange = (e) => { E.prov = e.target.value; pintarResultados(); };
+    q('#f-orden').onchange = (e) => { E.orden = e.target.value; pintarResultados(); };
+  }
   function listaFiltrada() {
     let l = D.prov.filter((p) => !p.eliminado_en && (E.verInact || p.estado === 'activo'));
     if (E.soloTrab) l = l.filter((p) => p._trab);
@@ -538,6 +543,7 @@
     const ofs = [];
     fams.forEach((f) => oficiosDeFam(f.id).forEach((o) => { if (C.porOf.get(o.id)) ofs.push({ o, f }); }));
     z.innerHTML = `<div class="rueda-cab"><span class="etiqueta-sec">Familias · ${fams.length}</span><span style="font-size:13px;color:var(--sec)">Gira la rueda para filtrar los oficios</span></div><div id="rueda"></div>
+      ${filtrosHTML()}
       <div class="seccion-cab"><h2 id="of-tit">Oficios</h2><span id="of-n"></span></div>
       <div class="rejilla">${ofs.map(({ o, f }) => {
         const [bg, fg] = tono(f.nombre); const n = C.porOf.get(o.id) || 0;
@@ -553,6 +559,7 @@
     montarRueda(z.querySelector('#rueda'), opciones.map((x) => ({ label: x.nombre, icon: x.id ? icoFam(x.nombre, 20, '#575049') : '' })), E.rueda, true,
       (i) => { E.rueda = i; filtrar(i); }, (i) => { E.rueda = i; filtrar(i); });
     filtrar(E.rueda);
+    engancharFiltros(z);
   }
 
   function pintarCategoria(z, base, C) {
@@ -570,8 +577,10 @@
         <a class="chip ${E.of ? '' : 'on'}" href="#/f/${f.id}">Todos <span class="chip-n">${C.porFam.get(f.id) || 0}</span></a>
         ${ofs.map((o) => `<a class="chip ${E.of === o.id ? 'on' : ''}" href="#/f/${f.id}/${o.id}">${esc(o.nombre)} <span class="chip-n">${C.porOf.get(o.id) || 0}</span></a>`).join('')}
       </div>
+      ${filtrosHTML()}
       ${grupos.length ? gruposHTML(grupos) : `<div class="vacio"><p>No hay proveedores aquí${E.soloTrab ? ' con los que hayamos trabajado' : ''}.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`}
       <div style="height:32px"></div>`;
+    engancharFiltros(z);
     engancharGrupos(z, grupos);
   }
 
@@ -591,7 +600,8 @@
     const grupos = ofsHit.map((o) => ({ titulo: o.nombre, fam: (IDX.fam.get(o.familia_id) || {}).nombre, items: deCat.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
     const vistaOtros = otros.slice(0, E.limite);
     if (!famsHit.length && !ofsHit.length && !otros.length) {
-      z.innerHTML = `<div class="vacio"><h2>Sin resultados</h2><p>Nada coincide con «${esc(E.q)}». ¿Lo conoces? Añádelo para el resto del equipo.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`;
+      z.innerHTML = `<div class="vacio"><h2>Sin resultados</h2><p>Nada coincide con «${esc(E.q)}». ¿Lo conoces? Añádelo para el resto del equipo.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>` + (E.soloTrab || E.verInact || E.prov ? filtrosHTML() : '');
+      engancharFiltros(z);
       return;
     }
     const tarjetasCat = [
@@ -602,6 +612,7 @@
       ${tarjetasCat.length ? `<div class="seccion-cab"><h2>Categorías</h2></div>
         <div class="rejilla">${tarjetasCat.map((c) => { const [bg, fg] = tono(c.fam); return `<a class="cat" href="${c.href}"><span class="cat-ico" style="background:${bg}">${icoFam(c.fam, 24, fg)}</span>
           <span class="cat-nombre">${esc(c.nombre)}</span><span class="cat-n">${c.n || 0}${c.sub ? ' · ' + esc(c.sub) : ''}</span></a>`; }).join('')}</div>` : ''}
+      ${filtrosHTML()}
       ${grupos.length ? gruposHTML(grupos) : ''}
       ${vistaOtros.length ? `<div class="seccion-cab"><h2>${grupos.length ? 'Otras coincidencias' : 'Proveedores'}</h2><span>${otros.length}</span></div>
         <div class="tarjeta">${vistaOtros.map((p) => filaHTML(p)).join('')}</div>` : ''}
@@ -613,6 +624,7 @@
       const inp = document.getElementById('q'); if (inp) inp.value = '';
       const xb = document.getElementById('q-x'); if (xb) xb.hidden = true;
     }));
+    engancharFiltros(z);
     engancharGrupos(z, grupos);
   }
 

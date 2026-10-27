@@ -288,3 +288,6 @@ svg { flex-shrink: 0; }
 .sel-chip select { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: inherit; font: inherit; padding: 0 28px 0 12px; min-height: 32px; cursor: pointer; outline: none; max-width: 230px; }
 .sel-chip::after { content: ''; position: absolute; right: 12px; top: 50%; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-70%) rotate(45deg); pointer-events: none; }
 .sel-chip select option { color: var(--tinta); }
+/* ---------- v1.5.1: filtros debajo de la categoría ---------- */
+#resultados .filtros { padding: 16px 20px 0; }
+@media (min-width: 700px) { #resultados .filtros { padding-left: 28px; padding-right: 28px; } }

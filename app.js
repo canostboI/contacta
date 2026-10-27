@@ -358,7 +358,8 @@
     });
     Object.values(fuente).forEach((l) => { for (let i = l.length - 1; i > 0; i--) { const j = Math.floor(azar() * (i + 1)); [l[i], l[j]] = [l[j], l[i]]; } });
     // Puntos de destino dentro del icono (anillo de radio 22–36 centrado en 52,52 y punto en 80,52)
-    const enIcono = (u, v) => [CX + (u - 54) * ESC, CY + (v - 54) * ESC];
+    // La «C» del icono está reducida al 72 % dentro del globo (marca/*.svg, grupo c-int)
+    const enIcono = (u, v) => { const uu = 52 + (u - 52.5) * 0.72, vv = 54 + (v - 52) * 0.72; return [CX + (uu - 54) * ESC, CY + (vv - 54) * ESC]; };
     const arco = (a0, a1) => { const a = (a0 + azar() * (a1 - a0)) * Math.PI / 180, r = 23.5 + azar() * 11; return enIcono(52 + r * Math.cos(a), 52 - r * Math.sin(a)); };
     const punto = () => { const a = azar() * 6.283, r = Math.sqrt(azar()) * 5.6; return enIcono(80 + r * Math.cos(a), 52 + r * Math.sin(a)); };
     const N = 190, rojos = fuente.muR.slice(0, 130), abajo = rojos.concat(fuente.muG.slice(50, 50 + N - rojos.length));

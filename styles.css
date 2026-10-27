@@ -275,3 +275,10 @@ svg { flex-shrink: 0; }
 .fd-link:hover span { text-decoration: underline; text-underline-offset: 3px; }
 .columna .fila-oficio { white-space: normal; }
 .cat[hidden] { display: none; }
+/* ---------- v1.4: valoraciones en la fila ---------- */
+.fila-val { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-top: 4px; }
+.val-num { font-size: 15px; font-weight: 700; color: var(--tinta-fuerte); }
+.val-cuantas { font-size: 14px; color: var(--sec); }
+.btn-valorar { border: 1px solid var(--linea); background: var(--blanco); border-radius: 16px; min-height: 34px; padding: 0 12px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; }
+.btn-valorar:hover { background: var(--suave); }
+.btn-valorar { white-space: nowrap; }

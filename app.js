@@ -432,7 +432,7 @@
   }
   // Vuelve al inicio de todo: sin búsqueda ni categoría, rueda arriba
   function irInicio() {
-    E.q = ''; E.limite = 60;
+    E.q = ''; E.limite = 60; E.rueda = 0;
     const inp = document.getElementById('q'); if (inp) { inp.value = ''; const xb = document.getElementById('q-x'); if (xb) xb.hidden = true; }
     if (location.hash && location.hash !== '#/' && location.hash !== '#') ir('#/'); else pintar();
     window.scrollTo(0, 0);
@@ -627,7 +627,11 @@
           ${datosFila(p)}
           <span class="fila-meta">
             ${lugar ? `<span class="lugar">${esc(lugar)}</span>` : ''}
-            ${p.estado === 'inactivo' ? '<span class="pastilla inact">Cerrado</span>' : p._trab ? `<span class="pastilla trab">${estrella('#E8A317', 12)} ${p._media.toFixed(1).replace('.', ',')} · Trabajado</span>` : ''}
+            ${p.estado === 'inactivo' ? '<span class="pastilla inact">Cerrado</span>' : p._trab ? '<span class="pastilla trab">Trabajado con nosotros</span>' : ''}
+          </span>
+          <span class="fila-val">
+            ${p._n ? `${estrellas(Math.round(p._media), 16)}<span class="val-num">${p._media.toFixed(1).replace('.', ',')}</span><span class="val-cuantas">(${p._n} valoraci${p._n === 1 ? 'ón' : 'ones'})</span>` : '<span class="val-cuantas">Sin valoraciones</span>'}
+            ${p.eliminado_en ? '' : (() => { const mia = p._vals.find((v) => sesion && v.usuario_id === sesion.user.id); return `<button class="btn-valorar" data-valorar="${p.id}" title="${mia ? 'Cambiar mi valoración' : 'Valorar este proveedor'}">${mia ? `${estrella('#E8A317', 13)} Mi nota: ${mia.estrellas}` : `${ico('mas', 14, '#575049', 2.4)} Valorar`}</button>`; })()}
           </span>
         </span>
       </div>
@@ -647,11 +651,17 @@
   function engancharFilas(z) {
     z.querySelectorAll('[data-abrir]').forEach((b) => {
       b.onclick = (e) => {
-        if (e.target.closest('a')) return; // teléfono, correo o web: actúan solos
+        if (e.target.closest('a, button')) return; // teléfono, correo, web o valorar: actúan solos
         const sel = window.getSelection && String(window.getSelection()); if (sel && sel.length > 1) return; // seleccionando texto
         ir('#/p/' + b.dataset.abrir);
       };
-      b.onkeydown = (e) => { if (e.key === 'Enter') ir('#/p/' + b.dataset.abrir); };
+      b.onkeydown = (e) => { if (e.key === 'Enter' && e.target === b) ir('#/p/' + b.dataset.abrir); };
+    });
+    z.querySelectorAll('[data-valorar]').forEach((b) => b.onclick = (e) => {
+      e.stopPropagation();
+      const p = IDX.porId.get(Number(b.dataset.valorar)); if (!p) return;
+      if (!enLinea()) return aviso('Sin conexión: para valorar hace falta conexión', false);
+      hojaValorar(p, p._vals.find((v) => sesion && v.usuario_id === sesion.user.id));
     });
     z.querySelectorAll('[data-copiar]').forEach((b) => b.onclick = async () => {
       const p = IDX.porId.get(Number(b.dataset.copiar));

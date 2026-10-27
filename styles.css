@@ -291,3 +291,14 @@ svg { flex-shrink: 0; }
 /* ---------- v1.5.1: filtros debajo de la categoría ---------- */
 #resultados .filtros { padding: 16px 20px 0; }
 @media (min-width: 700px) { #resultados .filtros { padding-left: 28px; padding-right: 28px; } }
+/* ---------- v1.6: identidad visual de Contacta (logos en marca/) ---------- */
+:root { --marca-azul: #00DAE7; --marca-azul-osc: #007BAC; --marca-oliva: #A9AC1A; --marca-coral: #FF345D; --marca-tinta: #353841; }
+.logo-titulo { line-height: 0; }
+.logo-cab { display: block; height: 60px; width: auto; margin-left: -6px; }
+.logo-acceso { display: block; height: 84px; width: auto; margin: 0 auto; }
+.barra-inicio .marca { display: block; height: 34px; width: auto; }
+#portada .p-fondo { background: linear-gradient(135deg, var(--marca-oliva), var(--marca-azul) 35%, var(--marca-azul-osc) 65%, var(--marca-coral)); }
+#portada .p-marco { line-height: 0; }
+#portada .p-palabra { display: block; height: 88px; width: auto; }
+#portada .p-linea { background: linear-gradient(90deg, var(--marca-azul), var(--marca-oliva), var(--marca-coral)); }
+@media (min-width: 700px) { .logo-cab { height: 70px; } }

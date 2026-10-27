@@ -330,7 +330,7 @@
         <img class="p-logo" src="${IMG.bp}" alt="" style="height:58px;animation-delay:.85s">
         <img class="p-logo" src="${IMG.recop}" alt="" style="height:46px;animation-delay:1.05s">
         <img class="p-logo" src="${IMG.munne}" alt="" style="height:40px;animation-delay:1.25s">
-      </div><div><div class="p-marco"><span class="p-palabra">Contacta</span></div><div class="p-linea"></div></div></div>`;
+      </div><div><div class="p-marco"><img class="p-palabra" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></div><div class="p-linea"></div></div></div>`;
     let fin = false;
     const terminar = () => { if (fin) return; fin = true; apuntar(); el.classList.add('fuera'); setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 400); };
     el.onclick = terminar; setTimeout(terminar, 2800); setTimeout(() => { el.hidden = true; }, 5000);
@@ -347,7 +347,7 @@
         <img src="${IMG.recop}" alt="RECOP" style="height:40px">
         <img src="${IMG.munne}" alt="Munné" style="height:34px">
       </div>
-      <div style="text-align:center"><h1 class="titulo">Contacta</h1><div style="color:var(--sec);margin-top:6px">Proveedores de Bosch Pascual, RECOP y Munné</div></div>
+      <div style="text-align:center"><h1 class="titulo logo-titulo"><img src="marca/contacta_horizontal_blanco.svg" alt="Contacta" class="logo-acceso"></h1><div style="color:var(--sec);margin-top:6px">Proveedores de Bosch Pascual, RECOP y Munné</div></div>
       <form class="acceso-caja" id="f-acceso" novalidate>
         <div class="form-grupo">
           <div class="campo"><label for="a-email" class="oculto-vis">Correo de empresa</label><input id="a-email" type="email" autocomplete="username" placeholder="nombre@boschpascual.com" required></div>
@@ -426,7 +426,7 @@
     pintarBuscador(document.getElementById('pl'));
   }
   function pantallaSimple(fn) {
-    $app.innerHTML = `<div class="barra-inicio"><a class="a-inicio" href="#/" title="Ir al inicio"><span class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:11px"><img src="${IMG.recop}" alt="RECOP" style="height:16px"><img src="${IMG.munne}" alt="Munné" style="height:13px"></span><span class="marca">Contacta</span></a></div><div class="pantalla" id="ps"></div>`;
+    $app.innerHTML = `<div class="barra-inicio"><a class="a-inicio" href="#/" title="Ir al inicio"><span class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:11px"><img src="${IMG.recop}" alt="RECOP" style="height:16px"><img src="${IMG.munne}" alt="Munné" style="height:13px"></span><img class="marca" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></a></div><div class="pantalla" id="ps"></div>`;
     $app.querySelector('.a-inicio').onclick = (e) => { e.preventDefault(); irInicio(); };
     fn(document.getElementById('ps')); window.scrollTo(0, 0);
   }
@@ -463,7 +463,7 @@
             <a class="btn-anadir" href="#/alta" aria-label="Añadir proveedor" title="Añadir proveedor">${ico('mas', 18, '#fff', 2.4)}<span>Añadir</span></a>
           </div>
         </div>
-        <h1 class="titulo"><a class="a-inicio" href="#/" title="Ir al inicio">Contacta</a></h1>
+        <h1 class="titulo logo-titulo"><a class="a-inicio" href="#/" title="Ir al inicio"><img class="logo-cab" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></a></h1>
         <div class="buscador">
           <div class="caja-busca">${ico('buscar', 20, '#736A63', 2.2)}
             <label for="q" class="oculto-vis">Buscar</label>

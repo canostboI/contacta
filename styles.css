@@ -334,3 +334,33 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .btn-valorar:hover { background: var(--acento-suave); }
 .acceso { background: var(--fondo); }
 .acceso-caja .form-grupo { background: var(--campo); }
+
+/* =====================================================================
+   v1.8.0 — Portada: los tres logos se deshacen y forman la «C» de Contacta
+   ===================================================================== */
+#portada { background: #FFFFFF; }
+#portada .p-escena { position: absolute; left: 50%; top: 50%; width: 390px; height: 640px; transform: translate(-50%, -50%); }
+#portada .p-logo { position: absolute; display: block; opacity: 0; transform: none; animation-name: p-aparece, p-recorta; animation-timing-function: ease-out, linear; animation-fill-mode: forwards, forwards; }
+#portada .p-capa { position: absolute; inset: 0; animation: p-atenua .7s ease-out 2.45s forwards; }
+#portada .p-part { position: absolute; left: 0; top: 0; display: block; opacity: 0; will-change: transform; animation-name: p-vuela; animation-timing-function: cubic-bezier(.45, .05, .35, 1); animation-fill-mode: both; }
+#portada .p-icono { position: absolute; width: 180px; height: 180px; opacity: 0; animation: p-icono .5s cubic-bezier(.2, .8, .2, 1) 2.3s forwards, p-brillo 1s ease-out 2.3s forwards; }
+#portada .p-nombre { position: absolute; left: 0; right: 0; top: 396px; display: flex; flex-direction: column; align-items: center; }
+#portada .p-marco { overflow: hidden; line-height: 1.2; }
+#portada .p-palabra { display: inline-block; height: auto; font-size: 40px; font-weight: 700; letter-spacing: -1.4px; opacity: 0; transform: translateY(110%); animation: p-sube2 .5s cubic-bezier(.2, .8, .2, 1) 2.55s forwards; }
+#portada .p-palabra b { font-weight: 700; }
+#portada .p-linea { width: 0; height: 3px; border-radius: 2px; margin: 10px auto 0; animation: p-ancho2 .35s ease-out 2.9s forwards; }
+@keyframes p-aparece { from { opacity: 0; } to { opacity: 1; } }
+@keyframes p-recorta { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 100% 0 0); } }
+@keyframes p-vuela {
+  0% { transform: translate(var(--x0), var(--y0)); background: var(--c0); opacity: 0; }
+  4% { transform: translate(var(--x0), var(--y0)); background: var(--c0); opacity: 1; }
+  30% { transform: translate(var(--x1), var(--y1)) scale(1.15); background: var(--c0); opacity: 1; }
+  62% { transform: translate(var(--x2), var(--y2)); opacity: 1; }
+  90% { transform: translate(var(--x3), var(--y3)); background: var(--c1); opacity: 1; }
+  100% { transform: translate(var(--x3), var(--y3)); background: var(--c1); opacity: 1; }
+}
+@keyframes p-atenua { to { opacity: .2; } }
+@keyframes p-icono { 0% { opacity: 0; transform: scale(.94); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes p-brillo { 0% { filter: drop-shadow(0 0 0 rgba(0, 135, 154, 0)); } 45% { filter: drop-shadow(0 0 18px rgba(0, 135, 154, .28)); } 100% { filter: drop-shadow(0 4px 12px rgba(20, 30, 40, .10)); } }
+@keyframes p-sube2 { to { transform: translateY(0); opacity: 1; } }
+@keyframes p-ancho2 { to { width: 64px; } }

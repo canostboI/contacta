@@ -319,21 +319,70 @@
   function mostrarPortada(apuntar) {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const el = document.getElementById('portada');
-    const N = 12; let rayas = '';
-    for (let i = 0; i < N; i++) {
-      const r = (0.3 + (i % 3) * 0.1 + Math.abs(i - N / 2) * 0.012).toFixed(3);
-      rayas += `<div class="p-raya" style="top:${i * 100 / N}%;height:calc(${100 / N}% + 1px);transform-origin:${i % 2 ? 'top' : 'bottom'};animation-delay:${r}s"></div>`;
-    }
-    el.className = ''; el.hidden = false;
-    el.innerHTML = `<div class="p-fondo"></div><div>${rayas}</div>
-      <div class="p-centro"><div class="p-logos">
-        <img class="p-logo" src="${IMG.bp}" alt="" style="height:58px;animation-delay:.85s">
-        <img class="p-logo" src="${IMG.recop}" alt="" style="height:46px;animation-delay:1.05s">
-        <img class="p-logo" src="${IMG.munne}" alt="" style="height:40px;animation-delay:1.25s">
-      </div><div><div class="p-marco"><img class="p-palabra" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></div><div class="p-linea"></div></div></div>`;
     let fin = false;
     const terminar = () => { if (fin) return; fin = true; apuntar(); el.classList.add('fuera'); setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 400); };
-    el.onclick = terminar; setTimeout(terminar, 2800); setTimeout(() => { el.hidden = true; }, 5000);
+    el.className = ''; el.hidden = false; el.innerHTML = '<div class="p-escena"></div>';
+    el.onclick = terminar;
+    const cargar = (src) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src; });
+    Promise.all([cargar(IMG.bp), cargar(IMG.munne), cargar(IMG.recop)]).then((ims) => {
+      if (fin) return;
+      let html = '';
+      try { html = escenaPortada(ims); } catch (e) { console.warn(e); html = ''; }
+      if (!html) { terminar(); return; }
+      el.querySelector('.p-escena').innerHTML = html;
+      el.querySelectorAll('canvas.p-logo').forEach((c, i) => { c.getContext('2d').drawImage(ims[i], 0, 0, c.width, c.height); });
+      setTimeout(terminar, 3700);
+    });
+    setTimeout(() => { if (!fin) terminar(); }, 6000);
+  }
+  // Los tres logos se deshacen en partículas y se recomponen en la «C» del icono de Contacta.
+  function escenaPortada(ims) {
+    if (ims.some((im) => !im)) return '';
+    const AN = 160, HUECO = 18, CX = 195, CY = 270, ESC = 180 / 108;
+    let s = 7; const azar = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    const altos = ims.map((im) => Math.round(im.naturalHeight * AN / im.naturalWidth));
+    let y = Math.round(290 - (altos.reduce((a, b) => a + b, 0) + HUECO * 2) / 2);
+    const logos = [], fuente = { bp: [], muR: [], muG: [], rc: [] };
+    ['bp', 'mu', 'rc'].forEach((k, i) => {
+      const h = altos[i], x = CX - AN / 2, paso = k === 'mu' ? 3 : 4;
+      logos.push({ x, y, h });
+      const c = document.createElement('canvas'); c.width = AN; c.height = h;
+      const cx = c.getContext('2d'); cx.drawImage(ims[i], 0, 0, AN, h);
+      const d = cx.getImageData(0, 0, AN, h).data;
+      for (let yy = 1; yy < h; yy += paso) for (let xx = 1; xx < AN; xx += paso) {
+        const j = (yy * AN + xx) * 4; if (d[j + 3] < 150) continue;
+        const p = [x + xx - 2, y + yy - 2, `rgb(${d[j]},${d[j + 1]},${d[j + 2]})`];
+        if (k === 'mu') ((d[j] > 150 && d[j + 1] < 110) ? fuente.muR : fuente.muG).push(p); else fuente[k].push(p);
+      }
+      y += h + HUECO;
+    });
+    Object.values(fuente).forEach((l) => { for (let i = l.length - 1; i > 0; i--) { const j = Math.floor(azar() * (i + 1)); [l[i], l[j]] = [l[j], l[i]]; } });
+    // Puntos de destino dentro del icono (anillo de radio 22–36 centrado en 52,52 y punto en 80,52)
+    const enIcono = (u, v) => [CX + (u - 54) * ESC, CY + (v - 54) * ESC];
+    const arco = (a0, a1) => { const a = (a0 + azar() * (a1 - a0)) * Math.PI / 180, r = 23.5 + azar() * 11; return enIcono(52 + r * Math.cos(a), 52 - r * Math.sin(a)); };
+    const punto = () => { const a = azar() * 6.283, r = Math.sqrt(azar()) * 5.6; return enIcono(80 + r * Math.cos(a), 52 + r * Math.sin(a)); };
+    const N = 190, rojos = fuente.muR.slice(0, 130), abajo = rojos.concat(fuente.muG.slice(50, 50 + N - rojos.length));
+    const grupos = [
+      [fuente.bp.slice(0, N), () => arco(51, 129), '#0BB4D2'],
+      [fuente.rc.slice(0, N), () => arco(139, 221), '#B4BD1F'],
+      [abajo, () => arco(231, 311), '#F7334A'],
+      [fuente.muG.slice(0, 50), punto, '#35383E']
+    ];
+    const minX = CX - AN / 2, INI = 0.55, BARRIDO = 0.6, FIN = 2.35;
+    let parts = '';
+    grupos.forEach(([lista, destino, c1]) => lista.forEach(([x, y, c0]) => {
+      const [tx, ty] = destino();
+      const rel = INI + (1 - (x - minX) / AN) * BARRIDO + azar() * 0.05;
+      const dx = x + 50 + azar() * 100, dy = y - 60 + azar() * 85;
+      const ang = (-115 + (azar() - 0.5) * 50) * Math.PI / 180, k = 1.45 + azar() * 0.4, vx = tx - CX, vy = ty - CY;
+      const sx = CX + (vx * Math.cos(ang) - vy * Math.sin(ang)) * k, sy = CY + (vx * Math.sin(ang) + vy * Math.cos(ang)) * k;
+      const t = azar() > 0.06 ? [3, 3, 4, 4, 4, 5][Math.floor(azar() * 6)] : 7;
+      parts += `<i class="p-part" style="--x0:${x}px;--y0:${y}px;--x1:${dx | 0}px;--y1:${dy | 0}px;--x2:${sx | 0}px;--y2:${sy | 0}px;--x3:${(tx - 2) | 0}px;--y3:${(ty - 2) | 0}px;--c0:${c0};--c1:${c1};width:${t}px;height:${t}px;border-radius:${t === 7 ? '50%' : '1px'};animation-delay:${rel.toFixed(2)}s;animation-duration:${(FIN - rel).toFixed(2)}s"></i>`;
+    }));
+    const lienzos = logos.map((l) => `<canvas class="p-logo" width="${AN * 2}" height="${l.h * 2}" style="left:${l.x}px;top:${l.y}px;width:${AN}px;height:${l.h}px;animation-delay:0s,${INI}s;animation-duration:.35s,${BARRIDO}s"></canvas>`).join('');
+    return `<div class="p-capa">${parts}</div>${lienzos}
+      <img class="p-icono" src="marca/contacta_icono_blanco.svg" alt="" style="left:${CX - 90}px;top:${CY - 90}px">
+      <div class="p-nombre"><div class="p-marco"><span class="p-palabra"><b style="color:#35383E">Con</b><b style="color:#0A9FC4">ta</b><b style="color:#9DA51A">c</b><b style="color:#F4324E">ta</b></span></div><div class="p-linea"></div></div>`;
   }
 
   /* ---------------- Pantalla de acceso ---------------- */

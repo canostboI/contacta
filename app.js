@@ -517,7 +517,8 @@
     const fams = familiasOrden();
     E.rueda = Math.min(E.rueda, Math.max(0, fams.length - 1));
     const ofs = [];
-    fams.forEach((f) => oficiosDeFam(f.id).forEach((o) => ofs.push({ o, f })));
+    // Solo oficios con proveedores; los vacíos siguen disponibles al dar de alta una empresa
+    fams.forEach((f) => oficiosDeFam(f.id).forEach((o) => { if (C.porOf.get(o.id)) ofs.push({ o, f }); }));
     z.innerHTML = `<div class="rueda-cab"><span class="etiqueta-sec">Familias · ${fams.length}</span><span style="font-size:13px;color:var(--sec)">Toca la del centro para ir a sus oficios</span></div><div id="rueda"></div>
       <div class="seccion-cab"><h2>Oficios</h2><span>${ofs.length}</span></div>
       <div class="rejilla">${ofs.map(({ o, f }) => {

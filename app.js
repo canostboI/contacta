@@ -755,6 +755,13 @@
     return d.length ? `<span class="fila-datos">${d.join('')}</span>` : '';
   }
   function engancharFilas(z) {
+    z.querySelectorAll('.fila[data-id]').forEach((f) => {
+      f.addEventListener('click', (e) => {
+        if (e.target.closest('a, button, [data-abrir]')) return;
+        const sel = window.getSelection && String(window.getSelection()); if (sel && sel.length > 1) return;
+        ir('#/p/' + f.dataset.id);
+      });
+    });
     z.querySelectorAll('[data-abrir]').forEach((b) => {
       b.onclick = (e) => {
         if (e.target.closest('a, button')) return; // teléfono, correo, web o valorar: actúan solos

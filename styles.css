@@ -439,3 +439,23 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .rueda::before { top: 12px; transform: rotate(45deg); }
 .rueda::after { bottom: 12px; transform: rotate(225deg); }
 @media (min-width: 700px) { .columna .rueda, .rueda { margin-left: 28px; margin-right: 28px; } .columna .rueda-sel { left: 8px; right: 8px; } }
+
+/* v1.9.7 — Filas de proveedores a todo el ancho en el móvil */
+@media (max-width: 699px) {
+  .tarjeta { margin: 0 8px; }
+  .grupo-cab { padding-left: 20px; padding-right: 12px; }
+  /* La fila pasa a rejilla: arriba iniciales + nombre + botones; debajo, el resto a todo el ancho */
+  .columna .fila { display: grid; grid-template-columns: 34px 1fr auto auto; column-gap: 8px; row-gap: 2px; align-items: center; padding: 10px 10px 10px 12px; }
+  .columna .fila-enlace, .columna .fila-txt { display: contents; }
+  .columna .fila .avatar { width: 34px; height: 34px; font-size: 13px; grid-column: 1; grid-row: 1; }
+  .columna .fila-nombre { grid-column: 2; grid-row: 1; font-size: 16px; line-height: 1.2; }
+  .columna .fila > .btn-circ, .columna .fila > a.btn-circ { grid-row: 1; margin-top: 0; width: 40px; height: 40px; }
+  .columna .fila-oficio, .columna .fila-datos, .columna .fila-meta, .columna .fila-val { grid-column: 1 / -1; cursor: pointer; }
+  .columna .fila-oficio { font-size: 13px; color: var(--sec); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .columna .fila-datos { gap: 0 14px; margin: 2px 0 0; }
+  .columna .fd { font-size: 14px; min-height: 26px; }
+  .columna .fd span { overflow: visible; text-overflow: clip; }
+  .columna .fila-meta { font-size: 13px; }
+  .columna .fila-val { margin-top: 2px; }
+  .columna .btn-valorar { min-height: 30px; }
+}

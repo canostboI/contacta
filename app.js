@@ -642,13 +642,15 @@
     const elegidos = E.of ? ofs.filter((o) => o.id === E.of) : ofs;
     const grupos = elegidos.map((o) => ({ titulo: o.nombre, fam: f.nombre, items: base.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
     z.innerHTML = `
+      <div class="cat-banda" style="background:${bg}">
       <div class="cat-cab">
         <a class="volver" href="#/">${ico('atras', 18, '#00879A', 2.2)}Categorías</a>
-        <div class="cat-titulo"><span class="cat-ico" style="background:${bg}">${icoFam(f.nombre, 26, fg)}</span><h2>${esc(f.nombre)}</h2></div>
+        <div class="cat-titulo"><span class="cat-ico" style="background:#fff">${icoFam(f.nombre, 26, fg)}</span><h2>${esc(f.nombre)}</h2></div>
       </div>
       <div class="oficios">
         <a class="chip ${E.of ? '' : 'on'}" href="#/f/${f.id}">Todos <span class="chip-n">${C.porFam.get(f.id) || 0}</span></a>
         ${ofs.map((o) => `<a class="chip ${E.of === o.id ? 'on' : ''}" href="#/f/${f.id}/${o.id}">${esc(o.nombre)} <span class="chip-n">${C.porOf.get(o.id) || 0}</span></a>`).join('')}
+      </div>
       </div>
       ${filtrosHTML()}
       ${grupos.length ? gruposHTML(grupos) : `<div class="vacio"><p>No hay proveedores aquí${E.soloTrab ? ' con los que hayamos trabajado' : ''}.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`}

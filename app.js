@@ -289,7 +289,7 @@
     window.addEventListener('online', () => { pintar(); refrescar(); });
     window.addEventListener('offline', pintar);
     let anchoPrev = ancho();
-    window.addEventListener('resize', debounce(() => { if (ancho() !== anchoPrev) { anchoPrev = ancho(); listaMontada = false; pintar(); } }, 200));
+    window.addEventListener('resize', debounce(() => { if (ancho() !== anchoPrev) { anchoPrev = ancho(); } }, 200));
   }
   async function arrancarDatos() {
     const conCache = cargarCache();
@@ -398,47 +398,47 @@
   }
 
   /* ---------------- Enrutado ---------------- */
+  // #/            → inicio: buscador + categorías
+  // #/f/FAM[/OF]  → una categoría (familia) y, si acaso, un oficio dentro
+  // #/p/ID        → ficha de un proveedor (pantalla completa)
   const ruta = () => (location.hash.replace(/^#\/?/, '') || '').split('/');
   const ir = (h) => { location.hash = h; };
-  let listaMontada = false;
+  let listaMontada = false; // se mantiene por compatibilidad con otras pantallas
+  let ultimaLista = '#/';
 
   function pintar() {
     if (!sesion) return pintarAcceso();
     if (!D.cargado) return;
-    const [r, id] = ruta();
-    if (r === 'p' && id) {
-      const p = IDX.porId.get(Number(id));
-      if (ancho()) {
-        if (!listaMontada || !document.querySelector('.marco.con-detalle')) {
-          $app.innerHTML = `<div class="marco con-detalle"><div class="panel-lista" id="pl"></div><div class="panel-detalle" id="pd"></div></div>`;
-          pintarBuscador(document.getElementById('pl')); listaMontada = true;
-        } else marcarActiva();
-        pintarFicha(document.getElementById('pd'), p);
-      } else { listaMontada = false; $app.innerHTML = `<div class="pantalla" id="pd"></div>`; pintarFicha(document.getElementById('pd'), p); window.scrollTo(0, 0); }
-      return;
-    }
+    const [r, id, id2] = ruta();
     listaMontada = false;
+    if (r === 'p' && id) return pantallaSimple((el) => pintarFicha(el, IDX.porId.get(Number(id))));
     if (r === 'alta') return pantallaSimple((el) => pintarFormulario(el, null));
     if (r === 'editar' && id) return pantallaSimple((el) => pintarFormulario(el, IDX.porId.get(Number(id))));
     if (r === 'papelera') return pantallaSimple(pintarPapelera);
     if (r === 'admin' && esAdmin()) return pantallaSimple(pintarAdmin);
     if (r === 'cuenta') return pantallaSimple(pintarCuenta);
-    if (ancho()) {
-      $app.innerHTML = `<div class="marco con-detalle"><div class="panel-lista" id="pl"></div><div class="panel-detalle" id="pd"></div></div>`;
-      pintarBuscador(document.getElementById('pl')); listaMontada = true;
-      document.getElementById('pd').innerHTML = `<div class="vacio" style="min-height:70vh;justify-content:center">${ico('contacto', 40, '#B5ADA6', 1.4)}<p>Elige un proveedor para ver su ficha.</p></div>`;
-    } else { $app.innerHTML = `<div class="marco"><div class="panel-lista" id="pl"></div></div>`; pintarBuscador(document.getElementById('pl')); }
+    E.fam = r === 'f' && id ? Number(id) : 0;
+    E.of = r === 'f' && id2 ? Number(id2) : 0;
+    ultimaLista = location.hash || '#/';
+    const yaEstaba = document.getElementById('resultados') && document.getElementById('q');
+    if (yaEstaba) { pintarResultados(); window.scrollTo(0, 0); return; }
+    $app.innerHTML = `<div class="columna" id="pl"></div>`;
+    pintarBuscador(document.getElementById('pl'));
   }
   function pantallaSimple(fn) { $app.innerHTML = `<div class="pantalla" id="ps"></div>`; fn(document.getElementById('ps')); window.scrollTo(0, 0); }
-  function marcarActiva() {
-    const [, id] = ruta();
-    document.querySelectorAll('.fila').forEach((f) => f.classList.toggle('activa', f.dataset.id === id));
-  }
 
   /* ---------------- Buscador ---------------- */
-  const E = { q: '', nivel: 'fam', fam: 0, of: 0, soloTrab: false, verInact: false, limite: 60 };
+  const E = { q: '', fam: 0, of: 0, soloTrab: false, verInact: false, limite: 60 };
   function familiasOrden() { return D.familias.slice().sort((a, b) => a.orden - b.orden); }
   function oficiosDeFam(famId) { return oficiosVivos().filter((o) => o.familia_id === famId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')); }
+
+  // Color suave por familia para avatares e iconos
+  const TONOS = [['#E6F0E8', '#2F6B3C'], ['#E4EEF8', '#2C5A85'], ['#FBEFD9', '#8A5A12'], ['#F6E3E3', '#9A2F2F'], ['#ECE6F6', '#5B3F8C'], ['#E3F2F1', '#256B66'], ['#F3EBE3', '#6E4F33'], ['#EFEFEA', '#5A5A4A']];
+  function tono(famNombre) {
+    const fams = familiasOrden(); const i = fams.findIndex((f) => f.nombre === famNombre);
+    return TONOS[(i < 0 ? 0 : i) % TONOS.length];
+  }
+  const iniciales = (s) => palabras(s).filter((w) => !/^\d+$/.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '·';
 
   function pintarBuscador(el) {
     const offline = !enLinea();
@@ -446,60 +446,170 @@
       <header class="cabecera">
         <div class="cab-fila">
           <div class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:12px"><img src="${IMG.recop}" alt="RECOP" style="height:18px"><img src="${IMG.munne}" alt="Munné" style="height:15px"></div>
-          <div style="display:flex;gap:4px">
+          <div style="display:flex;gap:4px;align-items:center">
             ${esAdmin() ? `<a class="btn-redondo" href="#/admin" aria-label="Administración">${ico('ajustes', 20, '#736A63', 1.8)}</a>` : `<a class="btn-redondo" href="#/cuenta" aria-label="Mi cuenta">${ico('salir', 20, '#736A63', 1.8)}</a>`}
             <a class="btn-redondo" href="#/papelera" aria-label="Papelera">${ico('papelera', 20, '#736A63', 1.8)}</a>
-            <a class="btn-redondo gris" href="#/alta" aria-label="Añadir proveedor">${ico('mas', 20, '#575049', 2.2)}</a>
+            <a class="btn-anadir" href="#/alta" aria-label="Añadir proveedor">${ico('mas', 18, '#fff', 2.4)}<span>Añadir</span></a>
           </div>
         </div>
         <h1 class="titulo">Contacta</h1>
         <div class="buscador">
-          <div class="caja-busca">${ico('buscar', 17, '#736A63', 2.2)}
+          <div class="caja-busca">${ico('buscar', 20, '#736A63', 2.2)}
             <label for="q" class="oculto-vis">Buscar</label>
-            <input id="q" type="text" placeholder="Nombre, oficio, obra, teléfono…" autocomplete="off" enterkeyhint="search" value="${esc(E.q)}">
+            <input id="q" type="text" placeholder="Buscar oficio, empresa, persona, obra…" autocomplete="off" enterkeyhint="search" value="${esc(E.q)}">
             <button class="borrar-busca" id="q-x" aria-label="Borrar búsqueda" ${E.q ? '' : 'hidden'}>${ico('x', 12, '#fff', 3)}</button>
           </div>
         </div>
+        <div class="filtros">
+          <button class="chip ${E.soloTrab ? 'on' : ''}" id="f-trab" aria-pressed="${E.soloTrab}">Trabajado con nosotros</button>
+          <button class="chip ${E.verInact ? 'on' : ''}" id="f-inact" aria-pressed="${E.verInact}">Ver cerrados</button>
+        </div>
+        ${offline ? `<div class="aviso-offline">Sin conexión: estás viendo los datos guardados. Para añadir o editar hace falta conexión.</div>` : ''}
       </header>
-      <div class="filtros">
-        <button class="chip ${E.soloTrab ? 'on' : ''}" id="f-trab" aria-pressed="${E.soloTrab}">Trabajado con nosotros</button>
-        <button class="chip ${E.verInact ? 'on' : ''}" id="f-inact" aria-pressed="${E.verInact}">Ver cerrados</button>
-      </div>
-      ${offline ? `<div class="aviso-offline">Sin conexión: estás viendo los datos guardados. Para añadir o editar hace falta conexión.</div>` : ''}
-      <div id="zona-rueda"></div>
-      <div id="resultados" style="flex:1"></div>`;
+      <div id="resultados"></div>`;
     const inp = el.querySelector('#q');
     const xb = el.querySelector('#q-x');
-    const alEscribir = debounce(() => { E.q = inp.value; E.limite = 60; xb.hidden = !E.q; pintarZonaRueda(); pintarResultados(); }, 120);
+    const alEscribir = debounce(() => { E.q = inp.value; E.limite = 60; xb.hidden = !E.q; pintarResultados(); }, 120);
     inp.oninput = alEscribir;
     inp.onkeydown = (e) => { if (e.key === 'Escape') { inp.value = ''; alEscribir(); } };
-    xb.onclick = () => { inp.value = ''; E.q = ''; xb.hidden = true; pintarZonaRueda(); pintarResultados(); inp.focus(); };
+    xb.onclick = () => { inp.value = ''; E.q = ''; xb.hidden = true; pintarResultados(); inp.focus(); };
     el.querySelector('#f-trab').onclick = (e) => { E.soloTrab = !E.soloTrab; e.currentTarget.classList.toggle('on', E.soloTrab); e.currentTarget.setAttribute('aria-pressed', E.soloTrab); pintarResultados(); };
     el.querySelector('#f-inact').onclick = (e) => { E.verInact = !E.verInact; e.currentTarget.classList.toggle('on', E.verInact); e.currentTarget.setAttribute('aria-pressed', E.verInact); pintarResultados(); };
-    pintarZonaRueda(); pintarResultados();
-    if (!ancho() && !E.q && !sessionStorage.getItem('contacta-foco')) { sessionStorage.setItem('contacta-foco', '1'); }
-    if (ancho()) setTimeout(() => inp.focus({ preventScroll: true }), 50);
+    pintarResultados();
+    if (ancho() && !E.fam) setTimeout(() => inp.focus({ preventScroll: true }), 50);
   }
 
-  function pintarZonaRueda() {
-    const z = document.getElementById('zona-rueda'); if (!z) return;
-    if (E.q.trim()) { z.innerHTML = ''; return; }
-    const fams = familiasOrden(); if (!fams.length) { z.innerHTML = ''; return; }
-    E.fam = Math.min(E.fam, fams.length - 1);
-    const f = fams[E.fam];
-    if (E.nivel === 'fam') {
-      z.innerHTML = `<div class="rueda-cab"><span class="etiqueta-sec">Familias · ${fams.length}</span><span style="font-size:13px;color:var(--sec)">Toca la del centro para ver sus oficios</span></div><div id="rueda"></div>`;
-      montarRueda(z.querySelector('#rueda'), fams.map((x) => ({ label: x.nombre, icon: icoFam(x.nombre, 20, '#575049'), chev: true })), E.fam, true,
-        (i) => { E.fam = i; E.of = 0; pintarResultados(); },
-        (i) => { E.fam = i; E.nivel = 'of'; E.of = 0; pintarZonaRueda(); pintarResultados(); });
-    } else {
-      const ofs = oficiosDeFam(f.id);
-      E.of = Math.min(E.of, Math.max(0, ofs.length - 1));
-      z.innerHTML = `<div class="rueda-cab"><button class="btn-texto fuerte" id="r-atras" style="margin-left:-26px;font-size:15px">${ico('atras', 18, '#575049', 2.2)}Familias</button><span class="etiqueta-sec" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.nombre)}</span></div><div id="rueda"></div>`;
-      z.querySelector('#r-atras').onclick = () => { E.nivel = 'fam'; pintarZonaRueda(); pintarResultados(); };
-      montarRueda(z.querySelector('#rueda'), ofs.map((o) => ({ label: o.nombre, icon: icoFam(f.nombre, 20, '#575049') })), E.of, ofs.length >= 6,
-        (i) => { E.of = i; pintarResultados(); }, null);
+  function listaFiltrada() {
+    let l = D.prov.filter((p) => !p.eliminado_en && (E.verInact || p.estado === 'activo'));
+    if (E.soloTrab) l = l.filter((p) => p._trab);
+    return l;
+  }
+  const ordenProv = (a, b) => (b._trab - a._trab) || (b._media - a._media) || a.nombre.localeCompare(b.nombre, 'es');
+  function cuentas(base) {
+    const porOf = new Map(); const porFam = new Map();
+    base.forEach((p) => {
+      const fams = new Set();
+      p._ofs.forEach((o) => { porOf.set(o.id, (porOf.get(o.id) || 0) + 1); fams.add(o.familia_id); });
+      fams.forEach((f) => porFam.set(f, (porFam.get(f) || 0) + 1));
+    });
+    return { porOf, porFam };
+  }
+
+  function pintarResultados() {
+    const z = document.getElementById('resultados'); if (!z) return;
+    const base = listaFiltrada();
+    const C = cuentas(base);
+    if (E.q.trim()) return pintarBusqueda(z, base, C);
+    if (E.fam && IDX.fam.get(E.fam)) return pintarCategoria(z, base, C);
+    // Inicio: rejilla de categorías
+    const fams = familiasOrden();
+    z.innerHTML = `<div class="seccion-cab"><h2>Categorías</h2><span>${base.length} proveedores</span></div>
+      <div class="rejilla">${fams.map((f) => {
+        const [bg, fg] = tono(f.nombre);
+        return `<a class="cat" href="#/f/${f.id}"><span class="cat-ico" style="background:${bg}">${icoFam(f.nombre, 24, fg)}</span>
+          <span class="cat-nombre">${esc(f.nombre)}</span><span class="cat-n">${C.porFam.get(f.id) || 0}</span></a>`;
+      }).join('')}</div><div style="height:32px"></div>`;
+  }
+
+  function pintarCategoria(z, base, C) {
+    const f = IDX.fam.get(E.fam);
+    const ofs = oficiosDeFam(f.id).filter((o) => C.porOf.get(o.id) || o.id === E.of);
+    const [bg, fg] = tono(f.nombre);
+    const elegidos = E.of ? ofs.filter((o) => o.id === E.of) : ofs;
+    const grupos = elegidos.map((o) => ({ titulo: o.nombre, fam: f.nombre, items: base.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
+    z.innerHTML = `
+      <div class="cat-cab">
+        <a class="volver" href="#/">${ico('atras', 18, '#575049', 2.2)}Categorías</a>
+        <div class="cat-titulo"><span class="cat-ico" style="background:${bg}">${icoFam(f.nombre, 26, fg)}</span><h2>${esc(f.nombre)}</h2></div>
+      </div>
+      <div class="oficios">
+        <a class="chip ${E.of ? '' : 'on'}" href="#/f/${f.id}">Todos <span class="chip-n">${C.porFam.get(f.id) || 0}</span></a>
+        ${ofs.map((o) => `<a class="chip ${E.of === o.id ? 'on' : ''}" href="#/f/${f.id}/${o.id}">${esc(o.nombre)} <span class="chip-n">${C.porOf.get(o.id) || 0}</span></a>`).join('')}
+      </div>
+      ${grupos.length ? gruposHTML(grupos) : `<div class="vacio"><p>No hay proveedores aquí${E.soloTrab ? ' con los que hayamos trabajado' : ''}.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`}
+      <div style="height:32px"></div>`;
+    engancharGrupos(z, grupos);
+  }
+
+  function pintarBusqueda(z, base, C) {
+    const toks = palabras(E.q);
+    // 1. Categorías: oficios y familias cuyo nombre o sinónimos coinciden
+    const casa = (ws) => toks.length && toks.every((t) => puntuaToken(t, ws) >= 2);
+    const ofsHit = oficiosVivos().filter((o) => casa(palabras(o.nombre + ' ' + (o.sinonimos || []).join(' ')))).filter((o) => C.porOf.get(o.id));
+    const famsHit = familiasOrden().filter((f) => casa(palabras(f.nombre)) && C.porFam.get(f.id));
+    const idsOf = new Set(ofsHit.map((o) => o.id));
+    // 2. Proveedores de esas categorías  ·  3. Otras coincidencias con proveedores
+    const res = buscar(E.q, base);
+    const deCat = base.filter((p) => p._ofs.some((o) => idsOf.has(o.id)));
+    const setCat = new Set(deCat.map((p) => p.id));
+    const otros = res.filter((p) => !setCat.has(p.id));
+    const grupos = ofsHit.map((o) => ({ titulo: o.nombre, fam: (IDX.fam.get(o.familia_id) || {}).nombre, items: deCat.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
+    const vistaOtros = otros.slice(0, E.limite);
+    if (!famsHit.length && !ofsHit.length && !otros.length) {
+      z.innerHTML = `<div class="vacio"><h2>Sin resultados</h2><p>Nada coincide con «${esc(E.q)}». ¿Lo conoces? Añádelo para el resto del equipo.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`;
+      return;
     }
+    const tarjetasCat = [
+      ...famsHit.map((f) => ({ href: `#/f/${f.id}`, nombre: f.nombre, sub: 'Categoría', n: C.porFam.get(f.id), fam: f.nombre })),
+      ...ofsHit.map((o) => { const f = IDX.fam.get(o.familia_id) || {}; return { href: `#/f/${f.id}/${o.id}`, nombre: o.nombre, sub: f.nombre || '', n: C.porOf.get(o.id), fam: f.nombre }; })
+    ];
+    z.innerHTML = `
+      ${tarjetasCat.length ? `<div class="seccion-cab"><h2>Categorías</h2></div>
+        <div class="rejilla">${tarjetasCat.map((c) => { const [bg, fg] = tono(c.fam); return `<a class="cat" href="${c.href}"><span class="cat-ico" style="background:${bg}">${icoFam(c.fam, 24, fg)}</span>
+          <span class="cat-nombre">${esc(c.nombre)}</span><span class="cat-n">${c.n || 0}${c.sub ? ' · ' + esc(c.sub) : ''}</span></a>`; }).join('')}</div>` : ''}
+      ${grupos.length ? gruposHTML(grupos) : ''}
+      ${vistaOtros.length ? `<div class="seccion-cab"><h2>${grupos.length ? 'Otras coincidencias' : 'Proveedores'}</h2><span>${otros.length}</span></div>
+        <div class="tarjeta">${vistaOtros.map((p) => filaHTML(p)).join('')}</div>` : ''}
+      ${otros.length > E.limite ? `<div class="mas"><button class="btn-blanco" id="ver-mas">Ver ${Math.min(otros.length - E.limite, 60)} más</button></div>` : ''}
+      <div style="height:32px"></div>`;
+    const vm = z.querySelector('#ver-mas'); if (vm) vm.onclick = () => { E.limite += 60; pintarResultados(); };
+    engancharGrupos(z, grupos);
+  }
+
+  function gruposHTML(grupos) {
+    return grupos.map((g, gi) => `
+      <div class="seccion-cab"><h2>${esc(g.titulo)}</h2><span>${g.items.length}</span>
+        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#575049')}<span>Copiar todos</span></button></div>
+      <div class="tarjeta">${g.items.map((p) => filaHTML(p, g.fam)).join('')}</div>`).join('');
+  }
+  function engancharGrupos(z, grupos) {
+    z.querySelectorAll('.copiar-todos').forEach((b) => b.onclick = async () => {
+      const g = grupos[Number(b.dataset.g)];
+      if (await copiarProveedores(g.items)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#575049') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.items.length} proveedores copiados. Pégalos en el comparativo.`); }
+    });
+    engancharFilas(z);
+  }
+
+  function filaHTML(p, famNombre) {
+    const fam = famNombre || p._fam;
+    const [bg, fg] = tono(fam);
+    const moviles = partes(p.moviles);
+    const telf = moviles[0] || partes(p.fijos)[0];
+    const lugar = [p.poblacion, p.provincia && p.poblacion && norm(p.provincia) === norm(p.poblacion) ? '' : p.provincia].filter(Boolean).join(' · ');
+    const oficios = p._ofs.map((o) => o.nombre).join(' · ');
+    return `<div class="fila" data-id="${p.id}">
+      <button class="fila-enlace" data-abrir="${p.id}">
+        <span class="avatar" style="background:${bg};color:${fg}">${esc(iniciales(p.nombre))}</span>
+        <span class="fila-txt">
+          <span class="fila-nombre">${esc(p.nombre)}</span>
+          ${oficios ? `<span class="fila-oficio">${esc(oficios)}</span>` : ''}
+          <span class="fila-meta">
+            ${lugar ? `<span class="lugar">${esc(lugar)}</span>` : ''}
+            ${p.estado === 'inactivo' ? '<span class="pastilla inact">Cerrado</span>' : p._trab ? `<span class="pastilla trab">${estrella('#E8A317', 12)} ${p._media.toFixed(1).replace('.', ',')} · Trabajado</span>` : ''}
+          </span>
+        </span>
+      </button>
+      <button class="btn-circ solo-ancho" data-copiar="${p.id}" aria-label="Copiar ${esc(p.nombre)}">${ico('copiar', 18, '#575049')}</button>
+      <a class="btn-circ" ${moviles[0] ? `href="https://wa.me/${telLink(moviles[0]).replace('+', '')}" target="_blank" rel="noopener"` : 'aria-disabled="true"'} aria-label="WhatsApp a ${esc(p.nombre)}">${ico('wa', 19, '#2F6B3C')}</a>
+      <a class="btn-circ rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'} aria-label="Llamar a ${esc(p.nombre)}">${ico('tel', 19, '#fff')}</a>
+    </div>`;
+  }
+  function engancharFilas(z) {
+    z.querySelectorAll('[data-abrir]').forEach((b) => b.onclick = () => ir('#/p/' + b.dataset.abrir));
+    z.querySelectorAll('[data-copiar]').forEach((b) => b.onclick = async () => {
+      const p = IDX.porId.get(Number(b.dataset.copiar));
+      if (await copiarProveedores([p])) marcarCopiado(b, false);
+    });
   }
 
   // Rueda tipo selector de iPhone: lista con «snap», difuminada arriba y abajo, infinita si loop.
@@ -543,75 +653,6 @@
     });
   }
 
-  function listaFiltrada() {
-    let l = D.prov.filter((p) => !p.eliminado_en && (E.verInact || p.estado === 'activo'));
-    if (E.soloTrab) l = l.filter((p) => p._trab);
-    return l;
-  }
-  function pintarResultados() {
-    const z = document.getElementById('resultados'); if (!z) return;
-    const base = listaFiltrada();
-    let grupos = []; let total = 0;
-    if (E.q.trim()) {
-      const res = buscar(E.q, base); total = res.length;
-      const vista = res.slice(0, E.limite);
-      const porOf = new Map();
-      vista.forEach((p) => { const o = p._ofs[0]; const k = o ? o.id : 0; if (!porOf.has(k)) porOf.set(k, { o, items: [] }); porOf.get(k).items.push(p); });
-      grupos = [...porOf.values()].map((g) => ({ titulo: g.o ? g.o.nombre : 'Sin oficio', fam: g.o ? (IDX.fam.get(g.o.familia_id) || {}).nombre : '', items: g.items, todos: g.items }));
-      if (res.length > E.limite) grupos.mas = res.length - E.limite;
-    } else {
-      const fams = familiasOrden(); const f = fams[E.fam]; if (!f) { z.innerHTML = ''; return; }
-      const ofs = E.nivel === 'fam' ? oficiosDeFam(f.id) : [oficiosDeFam(f.id)[E.of]].filter(Boolean);
-      grupos = ofs.map((o) => {
-        const items = base.filter((p) => p._ofs.some((x) => x.id === o.id))
-          .sort((a, b) => (b._trab - a._trab) || (b._media - a._media) || a.nombre.localeCompare(b.nombre, 'es'));
-        return { titulo: o.nombre, fam: f.nombre, items, todos: items };
-      }).filter((g) => g.items.length);
-      total = grupos.reduce((s, g) => s + g.items.length, 0);
-    }
-    if (!grupos.length) {
-      z.innerHTML = E.q.trim()
-        ? `<div class="vacio"><h2>Sin resultados</h2><p>Nadie coincide con «${esc(E.q)}». ¿Lo conoces? Añádelo para el resto del equipo.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`
-        : `<div class="vacio"><p>No hay proveedores en este oficio${E.soloTrab ? ' con los que hayamos trabajado' : ''}.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`;
-      return;
-    }
-    const [, idSel] = ruta();
-    z.innerHTML = grupos.map((g, gi) => `
-      <div class="grupo-cab"><div class="etiqueta-sec">${esc(g.titulo)} · ${g.items.length}</div>
-        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#575049')}<span>Copiar todos</span></button></div>
-      <div class="tarjeta">${g.items.map((p) => filaHTML(p, g.fam, String(p.id) === idSel)).join('')}</div>`).join('')
-      + (grupos.mas ? `<div class="mas"><button class="btn-blanco" id="ver-mas">Ver ${Math.min(grupos.mas, 60)} más (${total} en total)</button></div>` : '')
-      + '<div style="height:24px"></div>';
-    z.querySelectorAll('.copiar-todos').forEach((b) => b.onclick = async () => {
-      const g = grupos[Number(b.dataset.g)];
-      if (await copiarProveedores(g.todos)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#575049') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.todos.length} proveedores copiados. Pégalos en el comparativo.`); }
-    });
-    const vm = z.querySelector('#ver-mas'); if (vm) vm.onclick = () => { E.limite += 60; pintarResultados(); };
-    engancharFilas(z);
-  }
-  function filaHTML(p, famNombre, activa) {
-    const telf = partes(p.moviles)[0] || partes(p.fijos)[0];
-    const lugar = [p.poblacion, p.provincia && p.poblacion && norm(p.provincia) === norm(p.poblacion) ? '' : p.provincia].filter(Boolean).join(', ');
-    return `<div class="fila ${activa ? 'activa' : ''}" data-id="${p.id}">
-      <button class="fila-enlace" data-abrir="${p.id}">
-        <div class="ico-caja">${icoFam(famNombre || p._fam, 20, '#575049')}</div>
-        <div class="fila-txt"><div class="fila-nombre">${esc(p.nombre)}</div>
-          <div class="fila-meta">${p._trab ? `<span class="nota">${estrella('#E8A317')}${p._media.toFixed(1).replace('.', ',')}</span>` : ''}
-            ${p.estado === 'inactivo' ? '<span class="pastilla inact">Cerrado</span>' : p._trab ? '<span class="pastilla trab">Trabajado con nosotros</span>' : '<span class="pastilla ref">Referencia</span>'}
-            ${lugar ? `<span class="lugar">${esc(lugar)}</span>` : ''}</div></div>
-      </button>
-      <button class="btn-circ" data-copiar="${p.id}" aria-label="Copiar ${esc(p.nombre)}">${ico('copiar', 18, '#575049')}</button>
-      <a class="btn-circ rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'} aria-label="Llamar a ${esc(p.nombre)}">${ico('tel', 18, '#fff')}</a>
-    </div>`;
-  }
-  function engancharFilas(z) {
-    z.querySelectorAll('[data-abrir]').forEach((b) => b.onclick = () => ir('#/p/' + b.dataset.abrir));
-    z.querySelectorAll('[data-copiar]').forEach((b) => b.onclick = async () => {
-      const p = IDX.porId.get(Number(b.dataset.copiar));
-      if (await copiarProveedores([p])) marcarCopiado(b, false);
-    });
-  }
-
   /* ---------------- Ficha ---------------- */
   const abiertas = new Set();
   function pintarFicha(el, p) {
@@ -631,7 +672,7 @@
     if (p.recomendado_por) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Recomendado por</span><span class="v">${esc(p.recomendado_por)}</span></div></div>`);
     const borrado = !!p.eliminado_en;
     el.innerHTML = `
-      <div class="barra-nav"><a class="btn-texto ${ancho() ? 'solo-movil' : ''}" href="#/">${ico('atras', 22, '#575049', 2.2)}Contacta</a><span></span>
+      <div class="barra-nav"><a class="btn-texto" href="${esc(ultimaLista)}">${ico('atras', 22, '#575049', 2.2)}Volver</a><span></span>
         ${borrado ? '' : `<a class="btn-texto" href="#/editar/${p.id}">Editar</a>`}</div>
       ${borrado ? `<div class="marca-sinv" style="border-style:solid;background:#FFF4D6;color:#6B5310">${ico('papelera', 18, '#6B5310', 1.8)}<span>Está en la papelera. <a href="#/papelera" style="text-decoration:underline">Ver papelera</a></span></div>` : ''}
       <div class="identidad">

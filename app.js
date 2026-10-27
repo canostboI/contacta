@@ -620,8 +620,8 @@
       <div class="seccion-cab"><h2 id="of-tit">Oficios</h2><span id="of-n"></span></div>
       <div class="rejilla">${ofs.map(({ o, f }) => {
         const [bg, fg] = tono(f.nombre); const n = C.porOf.get(o.id) || 0;
-        return `<a class="cat" href="#/f/${f.id}/${o.id}" data-fam="${f.id}" title="${esc(f.nombre)}"><span class="cat-ico" style="background:${bg}">${icoFam(f.nombre, 24, fg)}</span>
-          <span class="cat-nombre">${esc(o.nombre)}</span><span class="cat-n">${n} proveedor${n === 1 ? '' : 'es'}</span></a>`;
+        return `<a class="cat cat-color" href="#/f/${f.id}/${o.id}" data-fam="${f.id}" title="${esc(f.nombre)}" style="background:${bg}"><span class="cat-ico" style="background:#fff">${icoFam(f.nombre, 24, fg)}</span>
+          <span class="cat-nombre">${esc(o.nombre)}</span><span class="cat-n" style="color:${fg}">${n} proveedor${n === 1 ? '' : 'es'}</span></a>`;
       }).join('')}</div><div style="height:32px"></div>`;
     const filtrar = (i) => {
       const op = opciones[i]; let n = 0;

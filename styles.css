@@ -302,3 +302,60 @@ svg { flex-shrink: 0; }
 #portada .p-palabra { display: block; height: 88px; width: auto; }
 #portada .p-linea { background: linear-gradient(90deg, var(--marca-azul), var(--marca-oliva), var(--marca-coral)); }
 @media (min-width: 700px) { .logo-cab { height: 70px; } }
+
+/* =====================================================================
+   v1.7 — TEMA OSCURO (sustituye la paleta clara; logos «oscuro» de marca/)
+   ===================================================================== */
+:root {
+  color-scheme: dark;
+  --tinta: #D9DEE5;
+  --tinta-fuerte: #F3F5F7;
+  --sec: #A3ADB8;
+  --placeholder: #6F7985;
+  --fondo: #0B0F14;
+  --campo: #1F262F;
+  --suave: #1F262F;
+  --linea: #262E38;
+  --blanco: #151A21;
+  --verde-bg: #123A2E;
+  --verde: #6FE0A8;
+  --ref-bg: #1F262F;
+  --ref: #B8C0CA;
+  --estrella: #F5B82E;
+  --acento: #00C4D4;
+  --acento-txt: #04161A;
+  --sombra: 0 1px 2px rgba(0, 0, 0, .4), 0 0 0 1px rgba(255, 255, 255, .04);
+}
+body { background: var(--fondo); }
+/* Logos de empresa en blanco para que se lean sobre oscuro */
+.logos-mini img, .acceso-logos img, #portada .p-logo { filter: brightness(0) invert(1); opacity: .72; }
+#portada .p-logo { opacity: 0; }
+/* Botones y chips activos con el turquesa de la marca */
+.btn-lleno, .chip.on, .sel-chip.on, .oficios .chip.on, .btn-anadir, #aviso { background: var(--acento); color: var(--acento-txt); }
+.btn-lleno:hover, .btn-anadir:hover { filter: brightness(1.08); }
+.oficios .chip, .btn-valorar { background: var(--blanco); border-color: var(--linea); color: var(--tinta); }
+.btn-valorar:hover { background: var(--campo); }
+.btn-texto:disabled { color: #5C6570; }
+.caja-busca { background: var(--blanco); border-color: var(--linea); }
+.caja-busca:focus-within { border-color: var(--acento); }
+.borrar-busca { background: #4A535E; }
+.aviso-offline { background: #3A2F10; color: #F2C94C; }
+.fila.activa, .columna .fila:hover { background: #1A2028; }
+.pastilla.sinv, .marca-sinv { border-color: #4A535E; }
+.pastilla.inact { background: #2A313B; color: #A3ADB8; }
+.btn-peligro, .error-txt { color: #FF5A6E; }
+#hoja-capa { background: rgba(0, 0, 0, .6); }
+.hoja { background: var(--fondo); box-shadow: 0 -8px 30px rgba(0, 0, 0, .5); border: 1px solid var(--linea); }
+.hoja-asa { background: #3A424D; }
+.pestanas button.on { box-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+.cat { border: 1px solid var(--linea); }
+.cat.resalta { box-shadow: 0 0 0 2px var(--acento), var(--sombra); }
+.rueda-sel { background: var(--campo); }
+.tarjeta, .form-grupo, .accion, .btn-blanco { border: 1px solid var(--linea); }
+.acceso { background: var(--fondo); }
+.acceso-caja .form-grupo { background: var(--blanco); }
+input, select, textarea { color-scheme: dark; }
+.sel-chip select option { background: var(--blanco); color: var(--tinta); }
+/* Portada: franjas oscuras sobre el degradado de marca */
+#portada { background: var(--fondo); }
+#portada .p-raya { background: var(--fondo); }

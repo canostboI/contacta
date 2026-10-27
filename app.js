@@ -62,8 +62,12 @@
     restaurar: '<path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v4h4"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>'
   };
-  const ico = (n, sz = 20, color = 'currentColor', w = 2) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
-  const estrella = (fill, sz = 13) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="${fill}" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>`;
+  // Tema oscuro: los colores pensados para fondo claro se traducen aquí
+  const OSCURO = { '#575049': '#D9DEE5', '#736A63': '#A3ADB8', '#8A817A': '#8B95A1', '#A39A93': '#6F7985', '#B5ADA6': '#5C6570', '#E6E1DC': '#3A424D',
+    '#2F6B3C': '#5FD4A0', '#B4151B': '#FF5A6E', '#6B5310': '#F2C94C', '#9C1C1C': '#FF8A8A' };
+  const col = (c) => OSCURO[c] || c;
+  const ico = (n, sz = 20, color = 'currentColor', w = 2) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${col(color)}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+  const estrella = (fill, sz = 13) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="${col(fill)}" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>`;
   const estrellas = (n, sz = 13) => `<span class="estrellas" aria-label="${n} de 5 estrellas">${[1, 2, 3, 4, 5].map((k) => estrella(k <= n ? '#E8A317' : '#E6E1DC', sz)).join('')}</span>`;
   const ICO_FAM = {
     'Demoliciones y movimiento de tierras': 'M14 6l4 4M4 20l10-10M12 4l8 8',
@@ -83,13 +87,13 @@
     'Servicios técnicos y control': 'M4 20h16M7 20V10l5-6 5 6v10M10 14h4',
     'Seguridad, limpieza y residuos': 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'
   };
-  const icoFam = (famNombre, sz = 20, color = 'currentColor') => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICO_FAM[famNombre] || 'M4 4h16v16H4z'}"/></svg>`;
+  const icoFam = (famNombre, sz = 20, color = 'currentColor') => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${col(color)}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICO_FAM[famNombre] || 'M4 4h16v16H4z'}"/></svg>`;
 
   /* ---------------- Avisos y hojas ---------------- */
   let tAviso;
   function aviso(txt, conOk = true) {
     const el = document.getElementById('aviso');
-    el.innerHTML = (conOk ? ico('ok', 16, '#fff', 2.6) : '') + `<span>${esc(txt)}</span>`;
+    el.innerHTML = (conOk ? ico('ok', 16, 'currentColor', 2.6) : '') + `<span>${esc(txt)}</span>`;
     el.hidden = false; clearTimeout(tAviso);
     tAviso = setTimeout(() => { el.hidden = true; }, 2200);
   }
@@ -110,7 +114,7 @@
         <p>${texto}</p>
         <div style="display:flex;gap:8px;padding:8px 20px 0">
           <button class="btn-blanco" data-r="0">Cancelar</button>
-          <button class="btn-lleno ancho" data-r="1" style="${peligro ? 'background:#B4151B' : ''}">${esc(botonTxt)}</button>
+          <button class="btn-lleno ancho" data-r="1" style="${peligro ? 'background:#E23A4F;color:#fff' : ''}">${esc(botonTxt)}</button>
         </div>`, (h) => {
         h.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => { cerrarHoja(); res(b.dataset.r === '1'); });
       });
@@ -330,7 +334,7 @@
         <img class="p-logo" src="${IMG.bp}" alt="" style="height:58px;animation-delay:.85s">
         <img class="p-logo" src="${IMG.recop}" alt="" style="height:46px;animation-delay:1.05s">
         <img class="p-logo" src="${IMG.munne}" alt="" style="height:40px;animation-delay:1.25s">
-      </div><div><div class="p-marco"><img class="p-palabra" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></div><div class="p-linea"></div></div></div>`;
+      </div><div><div class="p-marco"><img class="p-palabra" src="marca/contacta_horizontal_oscuro.svg" alt="Contacta"></div><div class="p-linea"></div></div></div>`;
     let fin = false;
     const terminar = () => { if (fin) return; fin = true; apuntar(); el.classList.add('fuera'); setTimeout(() => { el.hidden = true; el.innerHTML = ''; }, 400); };
     el.onclick = terminar; setTimeout(terminar, 2800); setTimeout(() => { el.hidden = true; }, 5000);
@@ -347,7 +351,7 @@
         <img src="${IMG.recop}" alt="RECOP" style="height:40px">
         <img src="${IMG.munne}" alt="Munné" style="height:34px">
       </div>
-      <div style="text-align:center"><h1 class="titulo logo-titulo"><img src="marca/contacta_horizontal_blanco.svg" alt="Contacta" class="logo-acceso"></h1><div style="color:var(--sec);margin-top:6px">Proveedores de Bosch Pascual, RECOP y Munné</div></div>
+      <div style="text-align:center"><h1 class="titulo logo-titulo"><img src="marca/contacta_horizontal_oscuro.svg" alt="Contacta" class="logo-acceso"></h1><div style="color:var(--sec);margin-top:6px">Proveedores de Bosch Pascual, RECOP y Munné</div></div>
       <form class="acceso-caja" id="f-acceso" novalidate>
         <div class="form-grupo">
           <div class="campo"><label for="a-email" class="oculto-vis">Correo de empresa</label><input id="a-email" type="email" autocomplete="username" placeholder="nombre@boschpascual.com" required></div>
@@ -426,7 +430,7 @@
     pintarBuscador(document.getElementById('pl'));
   }
   function pantallaSimple(fn) {
-    $app.innerHTML = `<div class="barra-inicio"><a class="a-inicio" href="#/" title="Ir al inicio"><span class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:11px"><img src="${IMG.recop}" alt="RECOP" style="height:16px"><img src="${IMG.munne}" alt="Munné" style="height:13px"></span><img class="marca" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></a></div><div class="pantalla" id="ps"></div>`;
+    $app.innerHTML = `<div class="barra-inicio"><a class="a-inicio" href="#/" title="Ir al inicio"><span class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:11px"><img src="${IMG.recop}" alt="RECOP" style="height:16px"><img src="${IMG.munne}" alt="Munné" style="height:13px"></span><img class="marca" src="marca/contacta_horizontal_oscuro.svg" alt="Contacta"></a></div><div class="pantalla" id="ps"></div>`;
     $app.querySelector('.a-inicio').onclick = (e) => { e.preventDefault(); irInicio(); };
     fn(document.getElementById('ps')); window.scrollTo(0, 0);
   }
@@ -444,7 +448,7 @@
   function oficiosDeFam(famId) { return oficiosVivos().filter((o) => o.familia_id === famId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')); }
 
   // Color suave por familia para avatares e iconos
-  const TONOS = [['#E6F0E8', '#2F6B3C'], ['#E4EEF8', '#2C5A85'], ['#FBEFD9', '#8A5A12'], ['#F6E3E3', '#9A2F2F'], ['#ECE6F6', '#5B3F8C'], ['#E3F2F1', '#256B66'], ['#F3EBE3', '#6E4F33'], ['#EFEFEA', '#5A5A4A']];
+  const TONOS = [['#123A2E', '#6FE0A8'], ['#12304A', '#6EC1FF'], ['#3A2E12', '#F2C94C'], ['#3D1A20', '#FF7F8F'], ['#2B2147', '#B9A0FF'], ['#0F3A3D', '#4FE3E8'], ['#352719', '#E6B37A'], ['#2A2D24', '#C8CF5A']];
   function tono(famNombre) {
     const fams = familiasOrden(); const i = fams.findIndex((f) => f.nombre === famNombre);
     return TONOS[(i < 0 ? 0 : i) % TONOS.length];
@@ -460,10 +464,10 @@
           <div style="display:flex;gap:4px;align-items:center">
             ${esAdmin() ? `<a class="btn-redondo" href="#/admin" aria-label="Administración" title="Administración">${ico('ajustes', 20, '#736A63', 1.8)}</a>` : `<a class="btn-redondo" href="#/cuenta" aria-label="Mi cuenta" title="Mi cuenta">${ico('salir', 20, '#736A63', 1.8)}</a>`}
             <a class="btn-redondo" href="#/papelera" aria-label="Papelera" title="Papelera">${ico('papelera', 20, '#736A63', 1.8)}</a>
-            <a class="btn-anadir" href="#/alta" aria-label="Añadir proveedor" title="Añadir proveedor">${ico('mas', 18, '#fff', 2.4)}<span>Añadir</span></a>
+            <a class="btn-anadir" href="#/alta" aria-label="Añadir proveedor" title="Añadir proveedor">${ico('mas', 18, 'currentColor', 2.4)}<span>Añadir</span></a>
           </div>
         </div>
-        <h1 class="titulo logo-titulo"><a class="a-inicio" href="#/" title="Ir al inicio"><img class="logo-cab" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></a></h1>
+        <h1 class="titulo logo-titulo"><a class="a-inicio" href="#/" title="Ir al inicio"><img class="logo-cab" src="marca/contacta_horizontal_oscuro.svg" alt="Contacta"></a></h1>
         <div class="buscador">
           <div class="caja-busca">${ico('buscar', 20, '#736A63', 2.2)}
             <label for="q" class="oculto-vis">Buscar</label>
@@ -762,7 +766,7 @@
     el.innerHTML = `
       <div class="barra-nav"><a class="btn-texto" href="${esc(ultimaLista)}">${ico('atras', 22, '#575049', 2.2)}Volver</a><span></span>
         ${borrado ? '' : `<a class="btn-texto" href="#/editar/${p.id}">Editar</a>`}</div>
-      ${borrado ? `<div class="marca-sinv" style="border-style:solid;background:#FFF4D6;color:#6B5310">${ico('papelera', 18, '#6B5310', 1.8)}<span>Está en la papelera. <a href="#/papelera" style="text-decoration:underline">Ver papelera</a></span></div>` : ''}
+      ${borrado ? `<div class="marca-sinv" style="border-style:solid;background:#3A2F10;color:#F2C94C">${ico('papelera', 18, '#6B5310', 1.8)}<span>Está en la papelera. <a href="#/papelera" style="text-decoration:underline">Ver papelera</a></span></div>` : ''}
       <div class="identidad">
         <div class="ico-grande">${icoFam(famN, 34, '#575049')}</div>
         <h1 class="nombre-grande">${esc(p.nombre)}</h1>
@@ -1168,7 +1172,7 @@
         return `<div class="fila"><div class="ico-caja" style="opacity:.6">${icoFam(p._fam, 20, '#575049')}</div><div class="fila-txt">
           <div class="fila-nombre">${esc(p.nombre)}</div>
           <div class="fila-meta" style="white-space:normal;flex-wrap:wrap">${esc(nombreUsuario(p.eliminado_por))} · ${hace(p.eliminado_en)}${p.motivo_eliminacion ? ' · ' + esc(p.motivo_eliminacion) : ''}
-            <span class="pastilla" style="${dias <= 5 ? 'background:#FBE3E1;color:#9C1C1C' : 'background:var(--suave)'}">${dias > 0 ? `Quedan ${dias} días` : 'Solo administrador'}</span></div></div>
+            <span class="pastilla" style="${dias <= 5 ? 'background:#4A1820;color:#FF8A8A' : 'background:var(--suave)'}">${dias > 0 ? `Quedan ${dias} días` : 'Solo administrador'}</span></div></div>
           <div style="display:flex;flex-direction:column;gap:4px"><button class="chip" data-rest="${p.id}">${ico('restaurar', 14, '#575049', 2)}Restaurar</button>
           ${esAdmin() ? `<button class="chip btn-peligro" data-borrar="${p.id}">Borrar</button>` : ''}</div></div>`;
       }).join('')}</div>` : `<div class="vacio">${ico('papelera', 40, '#B5ADA6', 1.4)}<p>La papelera está vacía.</p></div>`}

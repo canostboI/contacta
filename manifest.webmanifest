@@ -6,8 +6,8 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F9FAFB",
-  "theme_color": "#F5F3F1",
+  "background_color": "#0B0F14",
+  "theme_color": "#0B0F14",
   "icons": [
     {
       "src": "marca/contacta_icono_cuadrado_oscuro.svg",

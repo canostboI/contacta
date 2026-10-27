@@ -373,3 +373,4 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 @keyframes saludo-balanceo { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-6deg); } 45% { transform: rotate(5deg); } 70% { transform: rotate(-3deg); } }
 @keyframes saludo-latido { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.12); } 70% { transform: scale(.97); } }
 @media (prefers-reduced-motion: reduce) { .saludo-salto, .saludo-balanceo, .saludo-latido { animation: none; } }
+.logo-acceso { height: 64px; }

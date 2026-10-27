@@ -513,31 +513,28 @@
     const C = cuentas(base);
     if (E.q.trim()) return pintarBusqueda(z, base, C);
     if (E.fam && IDX.fam.get(E.fam)) return pintarCategoria(z, base, C);
-    // Inicio: rueda de familias (atajo) + todas las fichas de oficios, sin agrupar
+    // Inicio: rueda de familias (filtra) + fichas de oficios con proveedores
     const fams = familiasOrden();
-    E.rueda = Math.min(E.rueda, Math.max(0, fams.length - 1));
+    const opciones = [{ id: 0, nombre: 'Todas las familias' }, ...fams];
+    E.rueda = Math.min(E.rueda, opciones.length - 1);
     const ofs = [];
-    // Solo oficios con proveedores; los vacíos siguen disponibles al dar de alta una empresa
     fams.forEach((f) => oficiosDeFam(f.id).forEach((o) => { if (C.porOf.get(o.id)) ofs.push({ o, f }); }));
-    z.innerHTML = `<div class="rueda-cab"><span class="etiqueta-sec">Familias · ${fams.length}</span><span style="font-size:13px;color:var(--sec)">Toca la del centro para ir a sus oficios</span></div><div id="rueda"></div>
-      <div class="seccion-cab"><h2>Oficios</h2><span>${ofs.length}</span></div>
+    z.innerHTML = `<div class="rueda-cab"><span class="etiqueta-sec">Familias · ${fams.length}</span><span style="font-size:13px;color:var(--sec)">Gira la rueda para filtrar los oficios</span></div><div id="rueda"></div>
+      <div class="seccion-cab"><h2 id="of-tit">Oficios</h2><span id="of-n"></span></div>
       <div class="rejilla">${ofs.map(({ o, f }) => {
         const [bg, fg] = tono(f.nombre); const n = C.porOf.get(o.id) || 0;
-        return `<a class="cat ${n ? '' : 'cero'}" href="#/f/${f.id}/${o.id}" data-fam="${f.id}" title="${esc(f.nombre)}"><span class="cat-ico" style="background:${bg}">${icoFam(f.nombre, 24, fg)}</span>
+        return `<a class="cat" href="#/f/${f.id}/${o.id}" data-fam="${f.id}" title="${esc(f.nombre)}"><span class="cat-ico" style="background:${bg}">${icoFam(f.nombre, 24, fg)}</span>
           <span class="cat-nombre">${esc(o.nombre)}</span><span class="cat-n">${n} proveedor${n === 1 ? '' : 'es'}</span></a>`;
       }).join('')}</div><div style="height:32px"></div>`;
-    const resaltar = (i, saltar) => {
-      const f = fams[i]; if (!f) return;
-      const tiles = [...z.querySelectorAll('.cat')];
-      tiles.forEach((c) => c.classList.toggle('resalta', Number(c.dataset.fam) === f.id));
-      if (saltar) { const pri = tiles.find((c) => Number(c.dataset.fam) === f.id); if (pri) window.scrollTo({ top: pri.getBoundingClientRect().top + window.scrollY - 90, behavior: 'smooth' }); }
+    const filtrar = (i) => {
+      const op = opciones[i]; let n = 0;
+      z.querySelectorAll('.cat').forEach((c) => { const ver = !op.id || Number(c.dataset.fam) === op.id; c.hidden = !ver; if (ver) n++; });
+      z.querySelector('#of-tit').textContent = op.id ? op.nombre : 'Oficios';
+      z.querySelector('#of-n').textContent = n;
     };
-    if (fams.length) {
-      montarRueda(z.querySelector('#rueda'), fams.map((x) => ({ label: x.nombre, icon: icoFam(x.nombre, 20, '#575049'), chev: true })), E.rueda, true,
-        (i) => { E.rueda = i; resaltar(i, false); },
-        (i) => { E.rueda = i; resaltar(i, true); });
-      resaltar(E.rueda, false);
-    }
+    montarRueda(z.querySelector('#rueda'), opciones.map((x) => ({ label: x.nombre, icon: x.id ? icoFam(x.nombre, 20, '#575049') : '' })), E.rueda, true,
+      (i) => { E.rueda = i; filtrar(i); }, (i) => { E.rueda = i; filtrar(i); });
+    filtrar(E.rueda);
   }
 
   function pintarCategoria(z, base, C) {
@@ -592,6 +589,11 @@
       ${otros.length > E.limite ? `<div class="mas"><button class="btn-blanco" id="ver-mas">Ver ${Math.min(otros.length - E.limite, 60)} más</button></div>` : ''}
       <div style="height:32px"></div>`;
     const vm = z.querySelector('#ver-mas'); if (vm) vm.onclick = () => { E.limite += 60; pintarResultados(); };
+    z.querySelectorAll('a.cat').forEach((a) => a.addEventListener('click', () => {
+      E.q = ''; E.limite = 60;
+      const inp = document.getElementById('q'); if (inp) inp.value = '';
+      const xb = document.getElementById('q-x'); if (xb) xb.hidden = true;
+    }));
     engancharGrupos(z, grupos);
   }
 
@@ -617,24 +619,40 @@
     const lugar = [p.poblacion, p.provincia && p.poblacion && norm(p.provincia) === norm(p.poblacion) ? '' : p.provincia].filter(Boolean).join(' · ');
     const oficios = p._ofs.map((o) => o.nombre).join(' · ');
     return `<div class="fila" data-id="${p.id}">
-      <button class="fila-enlace" data-abrir="${p.id}">
+      <div class="fila-enlace" data-abrir="${p.id}" role="link" tabindex="0" title="Ver ficha">
         <span class="avatar" style="background:${bg};color:${fg}">${esc(iniciales(p.nombre))}</span>
         <span class="fila-txt">
           <span class="fila-nombre">${esc(p.nombre)}</span>
           ${oficios ? `<span class="fila-oficio">${esc(oficios)}</span>` : ''}
+          ${datosFila(p)}
           <span class="fila-meta">
             ${lugar ? `<span class="lugar">${esc(lugar)}</span>` : ''}
             ${p.estado === 'inactivo' ? '<span class="pastilla inact">Cerrado</span>' : p._trab ? `<span class="pastilla trab">${estrella('#E8A317', 12)} ${p._media.toFixed(1).replace('.', ',')} · Trabajado</span>` : ''}
           </span>
         </span>
-      </button>
+      </div>
       <button class="btn-circ solo-ancho" data-copiar="${p.id}" aria-label="Copiar ${esc(p.nombre)}">${ico('copiar', 18, '#575049')}</button>
       <a class="btn-circ" ${moviles[0] ? `href="https://wa.me/${telLink(moviles[0]).replace('+', '')}" target="_blank" rel="noopener"` : 'aria-disabled="true"'} aria-label="WhatsApp a ${esc(p.nombre)}">${ico('wa', 19, '#2F6B3C')}</a>
       <a class="btn-circ rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'} aria-label="Llamar a ${esc(p.nombre)}">${ico('tel', 19, '#fff')}</a>
     </div>`;
   }
+  function datosFila(p) {
+    const d = [];
+    if (p.personas) d.push(`<span class="fd">${ico('contacto', 14, '#8A817A', 2)}<span>${esc(p.personas)}</span></span>`);
+    [...partes(p.moviles), ...partes(p.fijos)].forEach((x) => d.push(`<a class="fd fd-link" href="tel:${esc(telLink(x))}">${ico('tel', 14, '#8A817A', 2)}<span>${esc(telBonito(x))}</span></a>`));
+    partes(p.emails).forEach((m) => d.push(`<a class="fd fd-link" href="mailto:${esc(m)}">${ico('correo', 14, '#8A817A', 2)}<span>${esc(m)}</span></a>`));
+    if (p.web) d.push(`<a class="fd fd-link" href="${esc(/^https?:/i.test(p.web) ? p.web : 'https://' + p.web)}" target="_blank" rel="noopener">${ico('web', 14, '#8A817A', 2)}<span>${esc(p.web.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, ''))}</span></a>`);
+    return d.length ? `<span class="fila-datos">${d.join('')}</span>` : '';
+  }
   function engancharFilas(z) {
-    z.querySelectorAll('[data-abrir]').forEach((b) => b.onclick = () => ir('#/p/' + b.dataset.abrir));
+    z.querySelectorAll('[data-abrir]').forEach((b) => {
+      b.onclick = (e) => {
+        if (e.target.closest('a')) return; // teléfono, correo o web: actúan solos
+        const sel = window.getSelection && String(window.getSelection()); if (sel && sel.length > 1) return; // seleccionando texto
+        ir('#/p/' + b.dataset.abrir);
+      };
+      b.onkeydown = (e) => { if (e.key === 'Enter') ir('#/p/' + b.dataset.abrir); };
+    });
     z.querySelectorAll('[data-copiar]').forEach((b) => b.onclick = async () => {
       const p = IDX.porId.get(Number(b.dataset.copiar));
       if (await copiarProveedores([p])) marcarCopiado(b, false);

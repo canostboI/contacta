@@ -265,3 +265,13 @@ svg { flex-shrink: 0; }
 .cat.resalta { box-shadow: 0 0 0 2px var(--tinta), var(--sombra); }
 .columna .rueda-cab { padding-top: 18px; }
 @media (min-width: 700px) { .columna .rueda-cab { padding-left: 44px; padding-right: 28px; } .columna .rueda-sel { left: 28px; right: 28px; } }
+/* ---------- v1.3: datos a la vista en cada fila ---------- */
+.columna .fila-enlace { cursor: pointer; align-items: flex-start; }
+.columna .fila { align-items: flex-start; }
+.columna .fila > .btn-circ, .columna .fila > a.btn-circ { margin-top: 4px; }
+.fila-datos { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 2px; }
+.fd { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; color: var(--tinta-fuerte); min-height: 28px; max-width: 100%; }
+.fd span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-link:hover span { text-decoration: underline; text-underline-offset: 3px; }
+.columna .fila-oficio { white-space: normal; }
+.cat[hidden] { display: none; }

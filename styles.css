@@ -403,3 +403,29 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .cat-banda { margin: 8px 12px 0; padding-bottom: 14px; border-radius: 18px; }
 .cat-banda .cat-ico { box-shadow: 0 1px 2px rgba(0,0,0,.06); }
 @media (min-width: 700px) { .cat-banda { margin: 8px 20px 0; } }
+
+/* v1.9.5 — Inicio más compacto en el móvil (se ve antes el listado) */
+@media (max-width: 699px) {
+  .cabecera { padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 4px; gap: 6px; }
+  /* Logos de empresa y botones en la misma línea */
+  .cab-fila { grid-template-columns: 1fr auto; min-height: 40px; }
+  .cab-fila > .logos-mini { grid-column: 1; grid-row: 1; justify-self: start; gap: 8px; }
+  .cab-fila > .logos-mini img[alt="Bosch Pascual"] { height: 9px !important; }
+  .cab-fila > .logos-mini img[alt="RECOP"] { height: 13px !important; top: 2px; }
+  .cab-fila > .logos-mini img[alt="Munné"] { height: 11px !important; }
+  .cab-fila .btn-redondo { width: 38px; height: 38px; }
+  .cab-fila .btn-anadir { width: 40px; height: 40px; }
+  .logo-cab { height: 40px; }
+  .caja-busca { height: 46px; }
+  .caja-busca input { font-size: 16px; }
+  /* Rueda de 3 líneas y sin el rótulo de encima */
+  .rueda-cab { display: none; }
+  .rueda { height: 138px; margin-top: 4px; }
+  .rueda-pad { height: 46px; }
+  .rueda-sel { top: 46px; }
+  /* Filtros en una sola línea que se desliza */
+  .filtros { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .filtros::-webkit-scrollbar { display: none; }
+  .filtros > * { flex-shrink: 0; }
+  .seccion-cab { padding-top: 10px; }
+}

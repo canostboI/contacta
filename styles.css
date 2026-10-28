@@ -557,3 +557,7 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 /* v1.12.7 — Marcar zona desde el mapa de un oficio */
 .mp-punto.fuera { opacity: .35; filter: grayscale(1); }
 .hoja-zona .mp-lista { max-height: 24vh; }
+/* ---------- v1.12.12: saludo de un logo cada 30 s ---------- */
+.saludo-hola { animation: saludo-hola 1.1s ease-in-out both; transform-origin: 50% 90%; }
+@keyframes saludo-hola { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(-9deg) scale(1.05); } 30% { transform: rotate(8deg) scale(1.05); } 45% { transform: rotate(-6deg); } 60% { transform: rotate(4deg); } 75% { transform: rotate(-2deg); } }
+@media (prefers-reduced-motion: reduce) { .saludo-hola { animation: none; } }

@@ -318,22 +318,26 @@
 
   /* ---------------- Saludo de los logos (cada 2-3 minutos) ---------------- */
   // Un pequeño gesto de los logos de la cabecera para que la herramienta se sienta viva
+  // Cada 30 s, uno de los logos (uno de los tres de empresa o el de Contacta, al azar y sin repetir
+  // el anterior) hace un gesto amigable: salto, balanceo, latido o saludo.
   function programarSaludo() {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const espera = (120 + Math.random() * 60) * 1000;
-    setTimeout(() => { if (document.visibilityState === 'visible') saludarLogos(); programarSaludo(); }, espera);
+    setTimeout(() => { if (document.visibilityState === 'visible' && !miniEnCurso) saludarLogos(); programarSaludo(); }, 30000);
   }
+  let ultimoSaludo = -1;
   function saludarLogos() {
-    const tipos = ['salto', 'balanceo', 'latido'];
+    const tipos = ['salto', 'balanceo', 'latido', 'hola'];
     const tipo = tipos[Math.floor(Math.random() * tipos.length)];
-    const els = [...document.querySelectorAll('.logos-mini img, .logo-cab, .barra-inicio .marca')];
-    els.forEach((el, i) => {
-      el.classList.remove('saludo-salto', 'saludo-balanceo', 'saludo-latido');
-      void el.offsetWidth; // reinicia la animación
-      el.style.animationDelay = (i * 0.12) + 's';
-      el.classList.add('saludo-' + tipo);
-      el.addEventListener('animationend', () => { el.classList.remove('saludo-' + tipo); el.style.animationDelay = ''; }, { once: true });
-    });
+    const els = [...document.querySelectorAll('.logos-mini img, .logo-cab, .barra-inicio .marca')].filter((x) => x.getBoundingClientRect().width);
+    if (!els.length) return;
+    let i = Math.floor(Math.random() * els.length);
+    if (els.length > 1 && i === ultimoSaludo) i = (i + 1) % els.length;
+    ultimoSaludo = i;
+    const el = els[i];
+    el.classList.remove('saludo-salto', 'saludo-balanceo', 'saludo-latido', 'saludo-hola');
+    void el.offsetWidth; // reinicia la animación
+    el.classList.add('saludo-' + tipo);
+    el.addEventListener('animationend', () => el.classList.remove('saludo-' + tipo), { once: true });
   }
   window.contactaSaludo = saludarLogos; // para probarlo desde la consola
 

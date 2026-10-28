@@ -1,6 +1,6 @@
 // Service worker de Contacta: guarda la app para que abra sin conexión.
 // Los datos de proveedores los guarda la propia app (localStorage), no este archivo.
-const CACHE = 'contacta-v1.12.11';
+const CACHE = 'contacta-v1.12.12';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './config.js', './manifest.webmanifest',
   './img.js', './favicon.ico',

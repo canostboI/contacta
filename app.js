@@ -339,12 +339,63 @@
     });
     setInterval(() => { if (document.visibilityState === 'visible') apuntar(); }, 5 * 60 * 1000);
   }
-  // Al tocar el logo de Contacta se repite la animación de arranque (se salta con un toque)
-  function repetirPortada() {
-    const el = document.getElementById('portada');
-    if (el && !el.hidden) return;
-    mostrarPortada(() => { try { localStorage.setItem(CLAVE_VISTA, String(Date.now())); } catch (_) {} });
+  // Al tocar el logo de Contacta: los logos de empresa de la cabecera se deshacen en puntos
+  // que vuelan hasta el globo y forman la «C»; luego los logos vuelven a aparecer.
+  let miniEnCurso = false;
+  function miniPortada() {
+    if (miniEnCurso) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const logo = document.querySelector('.logo-cab');
+    const imgs = [...document.querySelectorAll('.cabecera .logos-mini img')];
+    if (!logo || !imgs.length || !logo.getBoundingClientRect().width) return;
+    miniEnCurso = true;
+    try {
+      const L = logo.getBoundingClientRect();
+      // Coordenadas del logo horizontal (viewBox 3.3 13 344 91): «C» al 86 % centrada en (52,54)
+      const k = L.height / 91;
+      const aPantalla = (u, v) => [L.left + (u - 3.3) * k, L.top + (v - 13) * k];
+      const R1 = 22 * 0.86, R2 = 36 * 0.86;
+      const capa = document.createElement('div'); capa.className = 'mini-capa';
+      const [mx, my] = aPantalla(56, 54);
+      const mascara = document.createElement('div'); mascara.className = 'mini-mascara';
+      Object.assign(mascara.style, { left: (mx - 34 * k) + 'px', top: (my - 34 * k) + 'px', width: (68 * k) + 'px', height: (68 * k) + 'px' });
+      capa.appendChild(mascara);
+      const grupos = [[51, 129, '#0BB4D2'], [139, 221, '#B4BD1F'], [231, 311, '#F7334A']];
+      const parts = [];
+      imgs.forEach((im) => {
+        const r = im.getBoundingClientRect(); if (!r.width) return;
+        const cv = document.createElement('canvas'); const W = Math.round(r.width), H = Math.round(r.height);
+        cv.width = W; cv.height = H; const cx = cv.getContext('2d'); cx.drawImage(im, 0, 0, W, H);
+        let px; try { px = cx.getImageData(0, 0, W, H).data; } catch (_) { return; }
+        const pts = [];
+        for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) { const i = (y * W + x) * 4; if (px[i + 3] > 140) pts.push([r.left + x, r.top + y, `rgb(${px[i]},${px[i + 1]},${px[i + 2]})`]); }
+        for (let n = 0; n < Math.min(110, pts.length); n++) parts.push(pts.splice(Math.floor(Math.random() * pts.length), 1)[0]);
+      });
+      parts.forEach((p, i) => {
+        let tx, ty, c1;
+        if (i % 9 === 0) { const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * 5.5 * 0.86; [tx, ty] = aPantalla(52 + 23.6 + rr * Math.cos(a), 54 + rr * Math.sin(a)); c1 = '#35383E'; }
+        else { const g = grupos[i % 3]; const a = (g[0] + Math.random() * (g[1] - g[0])) * Math.PI / 180, rr = R1 + Math.random() * (R2 - R1); [tx, ty] = aPantalla(52 + rr * Math.cos(a), 54 - rr * Math.sin(a)); c1 = g[2]; }
+        const d = document.createElement('i'); d.className = 'mini-part';
+        Object.assign(d.style, { left: p[0] + 'px', top: p[1] + 'px', background: p[2] });
+        capa.appendChild(d);
+        const dx = tx - p[0], dy = ty - p[1];
+        const giro = (Math.random() - 0.5) * 60;
+        const retraso = Math.max(0, (p[0] - (imgs[0].getBoundingClientRect().left)) / 900) * 0.5 + Math.random() * 0.15;
+        d.animate([
+          { transform: 'translate(0,0)', background: p[2], opacity: 1 },
+          { offset: 0.35, transform: `translate(${dx * 0.35 + giro}px,${dy * 0.35 - 30 - Math.random() * 25}px) rotate(90deg)`, background: p[2], opacity: 1 },
+          { offset: 0.85, transform: `translate(${dx}px,${dy}px) rotate(180deg)`, background: c1, opacity: 1 },
+          { transform: `translate(${dx}px,${dy}px) rotate(180deg)`, background: c1, opacity: 0 }
+        ], { duration: 1500, delay: retraso * 1000, easing: 'cubic-bezier(.45,.05,.3,1)', fill: 'both' });
+      });
+      document.body.appendChild(capa);
+      imgs.forEach((im) => im.classList.add('mini-fuera'));
+      setTimeout(() => mascara.classList.add('fuera'), 1550);
+      setTimeout(() => imgs.forEach((im) => { im.classList.remove('mini-fuera'); im.classList.add('mini-vuelve'); }), 1900);
+      setTimeout(() => { capa.remove(); imgs.forEach((im) => im.classList.remove('mini-vuelve')); miniEnCurso = false; }, 2600);
+    } catch (e) { console.warn(e); miniEnCurso = false; document.querySelectorAll('.mini-capa').forEach((x) => x.remove()); }
   }
+  const lanzarMini = () => setTimeout(miniPortada, 60);
   function mostrarPortada(apuntar) {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const el = document.getElementById('portada');
@@ -506,7 +557,7 @@
   }
   function pantallaSimple(fn) {
     $app.innerHTML = `<div class="barra-inicio"><a class="a-inicio" href="#/" title="Ir al inicio"><span class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:11px"><img src="${IMG.recop}" alt="RECOP" style="height:16px"><img src="${IMG.munne}" alt="Munné" style="height:13px"></span><img class="marca" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></a></div><div class="pantalla" id="ps"></div>`;
-    $app.querySelector('.a-inicio').onclick = (e) => { e.preventDefault(); irInicio(); if (e.target.closest('.marca')) repetirPortada(); };
+    $app.querySelector('.a-inicio').onclick = (e) => { e.preventDefault(); irInicio(); if (e.target.closest('.marca')) lanzarMini(); };
     fn(document.getElementById('ps')); window.scrollTo(0, 0);
   }
   // Vuelve al inicio de todo: sin búsqueda ni categoría, rueda arriba
@@ -560,7 +611,7 @@
     inp.oninput = alEscribir;
     inp.onkeydown = (e) => { if (e.key === 'Escape') { inp.value = ''; alEscribir(); } };
     xb.onclick = () => { inp.value = ''; E.q = ''; xb.hidden = true; pintarResultados(); inp.focus(); };
-    el.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => { e.preventDefault(); irInicio(); if (a.querySelector('.logo-cab')) repetirPortada(); });
+    el.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => { e.preventDefault(); irInicio(); if (a.querySelector('.logo-cab')) lanzarMini(); });
     pintarResultados();
     if (ancho() && !E.fam) setTimeout(() => inp.focus({ preventScroll: true }), 50);
   }

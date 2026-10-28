@@ -859,20 +859,20 @@
       <div class="barra-nav"><a class="btn-texto" href="${esc(ultimaLista)}">${ico('atras', 22, '#575049', 2.2)}Volver</a><span></span>
         ${borrado ? '' : `<a class="btn-texto" href="#/editar/${p.id}">Editar</a>`}</div>
       ${borrado ? `<div class="marca-sinv" style="border-style:solid;background:#FFF4D6;color:#6B5310">${ico('papelera', 18, '#6B5310', 1.8)}<span>Está en la papelera. <a href="#/papelera" style="text-decoration:underline">Ver papelera</a></span></div>` : ''}
-      <div class="identidad">
-        <div class="ico-grande">${icoFam(famN, 34, '#575049')}</div>
+      <div class="identidad ficha-color" style="background:${tono(famN)[0]}">
+        <div class="ficha-avatar" style="color:${tono(famN)[1]}">${esc(iniciales(p.nombre))}<span class="ficha-fam" title="${esc(famN || '')}">${icoFam(famN, 16, tono(famN)[1])}</span></div>
         <h1 class="nombre-grande">${esc(p.nombre)}</h1>
-        <div class="subtitulo"><span>${esc(p._ofs.map((o) => o.nombre).join(' · ') || 'Sin oficio')}</span></div>
+        <div class="subtitulo ficha-oficios">${p._ofs.length ? p._ofs.map((o) => `<span class="ficha-of" style="color:${tono(famN)[1]}">${esc(o.nombre)}</span>`).join('') : '<span>Sin oficio</span>'}</div>
         <div class="subtitulo">${p.estado === 'inactivo' ? '<span class="pastilla inact">Empresa cerrada</span>' : p._trab ? '<span class="pastilla trab">Trabajado con nosotros</span>' : '<span class="pastilla ref">Referencia</span>'}
           ${p.sin_verificar ? '<span class="pastilla sinv" title="No se pudo confirmar que siga activa">Sin verificar</span>' : ''}</div>
       </div>
       <div class="acciones">
-        <a class="accion rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'}>${ico('tel', 20, '#fff')}Llamar</a>
-        <a class="accion" ${moviles[0] ? `href="https://wa.me/${telLink(moviles[0]).replace('+', '')}" target="_blank" rel="noopener"` : 'aria-disabled="true"'}>${ico('wa', 20, '#575049')}WhatsApp</a>
-        <a class="accion" ${emails[0] ? `href="mailto:${esc(emails[0])}"` : 'aria-disabled="true"'}>${ico('correo', 20, '#575049')}Correo</a>
-        <button class="accion" id="a-copiar">${ico('copiar', 20, '#575049')}<span>Copiar</span></button>
-        <button class="accion" id="a-vcf">${ico('contacto', 20, '#575049')}<span>Guardar en contactos</span></button>
-        <button class="accion" id="a-compartir">${ico('compartir', 20, '#575049')}<span>Compartir</span></button>
+        <a class="accion rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'}><span class="acc-ico">${ico('tel', 20, '#fff')}</span>Llamar</a>
+        <a class="accion" ${moviles[0] ? `href="https://wa.me/${telLink(moviles[0]).replace('+', '')}" target="_blank" rel="noopener"` : 'aria-disabled="true"'}><span class="acc-ico" style="background:#E3F5EA">${ico('wa', 20, '#1E8E4E')}</span>WhatsApp</a>
+        <a class="accion" ${emails[0] ? `href="mailto:${esc(emails[0])}"` : 'aria-disabled="true"'}><span class="acc-ico" style="background:#E3F8FA">${ico('correo', 20, '#00879A')}</span>Correo</a>
+        <button class="accion" id="a-copiar"><span class="acc-ico" style="background:#F3F5D9">${ico('copiar', 20, '#7E8A12')}</span><span>Copiar</span></button>
+        <button class="accion" id="a-vcf"><span class="acc-ico" style="background:#E2EEF8">${ico('contacto', 20, '#007BAC')}</span><span>Guardar en contactos</span></button>
+        <button class="accion" id="a-compartir"><span class="acc-ico" style="background:#FDE6EA">${ico('compartir', 20, '#E0284F')}</span><span>Compartir</span></button>
       </div>
       ${p.sin_verificar ? `<div class="marca-sinv" style="margin-top:12px">${ico('info', 18, '#736A63', 1.8)}<span>No pudimos confirmar que siga activa. Si hablas con ellos, edita o valora la ficha y la marca desaparece.</span></div>` : ''}
       ${datos.length ? `<div class="seccion"><span class="etiqueta-sec">Contacto</span></div><div class="tarjeta">${datos.join('')}</div>` : ''}

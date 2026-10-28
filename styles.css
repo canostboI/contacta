@@ -477,3 +477,17 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .ia-puntos span:nth-child(3) { background: var(--marca-coral, #FF345D); animation-delay: .3s; }
 @keyframes ia-bota { 0%, 100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-8px); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ia-puntos span { animation: none; opacity: 1; } }
+/* ---------- v1.11.0: ficha del proveedor con color ---------- */
+.ficha-color { margin: 4px 20px 16px; border-radius: 20px; padding: 22px 16px 18px; }
+.ficha-avatar { position: relative; width: 76px; height: 76px; border-radius: 38px; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; letter-spacing: .5px; box-shadow: 0 2px 8px rgba(20, 30, 40, .08); }
+.ficha-fam { position: absolute; right: -4px; bottom: -4px; width: 30px; height: 30px; border-radius: 15px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(20, 30, 40, .12); }
+.ficha-color .nombre-grande { color: var(--tinta-fuerte); }
+.ficha-oficios { gap: 6px; }
+.ficha-of { background: rgba(255, 255, 255, .85); border-radius: 14px; padding: 4px 12px; font-size: 14px; font-weight: 600; }
+.ficha-color .pastilla { background: rgba(255, 255, 255, .85); }
+.ficha-color .pastilla.trab { background: #fff; }
+.acc-ico { width: 36px; height: 36px; border-radius: 18px; display: inline-flex; align-items: center; justify-content: center; }
+.accion { gap: 6px; min-height: 76px; }
+.accion.rojo .acc-ico { background: rgba(255, 255, 255, .2); }
+.accion:not(.rojo):hover { background: #F8FAFB; }
+

@@ -158,7 +158,7 @@
   }
 
   /* ---------------- Datos ---------------- */
-  const D = { familias: [], oficios: [], prov: [], links: [], vals: [], usuarios: [], cargado: false, desde: null };
+  const D = { familias: [], oficios: [], prov: [], links: [], vals: [], usuarios: [], munis: [], alias: [], cargado: false, desde: null };
   let IDX = null; // índices derivados
   let yo = null; // fila de usuarios del usuario actual
 
@@ -172,12 +172,14 @@
     return out;
   }
   async function cargarDatos() {
-    const [familias, oficios, prov, links, vals, usuarios] = await Promise.all([
+    const [familias, oficios, prov, links, vals, usuarios, munis, alias] = await Promise.all([
       leerTodo('familias'), leerTodo('oficios'), leerTodo('proveedores'),
       leerTodo('proveedor_oficios', 'proveedor_id,oficio_id', 'proveedor_id'),
-      leerTodo('valoraciones'), leerTodo('usuarios', 'id,email,nombre,empresa,rol,bloqueado,created_at')
+      leerTodo('valoraciones'), leerTodo('usuarios', 'id,email,nombre,empresa,rol,bloqueado,created_at'),
+      leerTodo('municipios', 'ine,nombre,lat,lon', 'ine').catch(() => []),
+      leerTodo('poblaciones_alias', 'texto,ine', 'texto').catch(() => [])
     ]);
-    Object.assign(D, { familias, oficios, prov, links, vals, usuarios, cargado: true, desde: new Date().toISOString() });
+    Object.assign(D, { familias, oficios, prov, links, vals, usuarios, munis, alias, cargado: true, desde: new Date().toISOString() });
     try { localStorage.setItem(CLAVE_DATOS, JSON.stringify(D)); } catch (_) {}
     indexar();
   }
@@ -202,7 +204,15 @@
     const ofsDe = new Map(); D.links.forEach((l) => { if (!ofsDe.has(l.proveedor_id)) ofsDe.set(l.proveedor_id, []); ofsDe.get(l.proveedor_id).push(l.oficio_id); });
     const valsDe = new Map(); D.vals.forEach((v) => { if (!valsDe.has(v.proveedor_id)) valsDe.set(v.proveedor_id, []); valsDe.get(v.proveedor_id).push(v); });
     const porId = new Map();
+    // v1.12.0 — Coordenadas de cada proveedor según su población (tablas municipios y poblaciones_alias)
+    const geoClave = (t) => String(t || '').trim().replace(/\s+/g, ' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const muniIne = new Map((D.munis || []).map((m) => [m.ine, m]));
+    const geo = new Map();
+    (D.munis || []).forEach((m) => geo.set(geoClave(m.nombre), m));
+    (D.alias || []).forEach((a) => { const m = muniIne.get(a.ine); if (m) geo.set(a.texto, m); });
     D.prov.forEach((p) => {
+      const g = p.poblacion ? geo.get(geoClave(p.poblacion)) : null;
+      p._lat = g ? g.lat : null; p._lon = g ? g.lon : null; p._muni = g ? g.nombre : '';
       const ofs = (ofsDe.get(p.id) || []).map((id) => of.get(id)).filter(Boolean);
       const vs = (valsDe.get(p.id) || []).sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
       const media = vs.length ? vs.reduce((s, v) => s + v.estrellas, 0) / vs.length : 0;
@@ -215,7 +225,7 @@
       p._tels = [...partes(p.moviles), ...partes(p.fijos)].map(tel9);
       porId.set(p.id, p);
     });
-    IDX = { fam, of, usu, porId };
+    IDX = { fam, of, usu, porId, geo };
     yo = sesion ? usu.get(sesion.user.id) || yo : null;
   }
   const esAdmin = () => yo && yo.rol === 'admin' && !yo.bloqueado;

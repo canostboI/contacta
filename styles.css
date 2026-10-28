@@ -467,3 +467,13 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .cp:hover svg { stroke: var(--acento, #00879A); }
 .cp.hecho { background: #E6F2E8; }
 .fila-nombre .cp { margin-left: 4px; position: relative; top: -1px; }
+
+/* v1.10.0 — Lectura con IA (Pegar texto y Pantallazo) */
+.ia-cargando { padding: 28px 20px 18px; text-align: center; }
+.ia-puntos { display: flex; justify-content: center; gap: 8px; margin-bottom: 14px; }
+.ia-puntos span { width: 11px; height: 11px; border-radius: 50%; animation: ia-bota 1s ease-in-out infinite; }
+.ia-puntos span:nth-child(1) { background: var(--marca-azul-osc, #007BAC); }
+.ia-puntos span:nth-child(2) { background: var(--marca-oliva, #A9AC1A); animation-delay: .15s; }
+.ia-puntos span:nth-child(3) { background: var(--marca-coral, #FF345D); animation-delay: .3s; }
+@keyframes ia-bota { 0%, 100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-8px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ia-puntos span { animation: none; opacity: 1; } }

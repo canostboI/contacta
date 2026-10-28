@@ -1038,8 +1038,9 @@
       <div class="barra-nav"><a class="btn-texto" href="${editar ? '#/p/' + p.id : '#/'}">Cancelar</a><div class="hoja-titulo">${editar ? 'Editar proveedor' : 'Nuevo proveedor'}</div><button class="btn-texto fuerte" type="submit" id="g-btn">Guardar</button></div>
       ${editar ? '' : `<div class="etiqueta-sec" style="padding:14px 36px 6px">Rellenar automáticamente</div>
       <div class="relleno"><button type="button" class="btn-blanco" id="b-pegar">${ico('pegar', 18, '#575049')}Pegar texto</button>
-        <button type="button" class="btn-blanco" id="b-foto" style="opacity:.55" title="Disponible cuando se active la IA">${ico('camara', 18, '#575049')}Pantallazo</button></div>
-      <div class="ayuda">Pega un mensaje de WhatsApp, una firma de correo o una tarjeta y se rellenan los datos. Revísalos antes de guardar.</div>`}
+        <button type="button" class="btn-blanco" id="b-foto">${ico('camara', 18, '#575049')}Pantallazo</button>
+        <input type="file" id="b-foto-in" accept="image/*" hidden></div>
+      <div class="ayuda">Pega un mensaje de WhatsApp, una firma de correo o una tarjeta, o sube un pantallazo, y la IA rellena los datos. Revísalos antes de guardar.</div>`}
       <div class="etiqueta-sec" style="padding:18px 36px 6px">Datos</div>
       <div class="form-grupo">
         <div class="campo"><label for="c-nombre" class="oblig">Nombre</label><input id="c-nombre" required maxlength="160" placeholder="Empresa" value="${v('nombre')}"></div>
@@ -1078,8 +1079,25 @@
     };
     pintarChips();
     if (!editar) {
-      el.querySelector('#b-pegar').onclick = () => hojaPegar(el);
-      el.querySelector('#b-foto').onclick = () => aviso('El pantallazo llegará cuando se active la IA. De momento, usa «Pegar texto».', false);
+      // Rellena solo los campos vacíos y añade el oficio sugerido.
+      const aplicar = (d) => {
+        const pon = (id, val) => { const i = el.querySelector('#' + id); if (val && i && !i.value.trim()) i.value = val; };
+        const tels = (l) => (l || []).map((x) => tel9(x)).filter((x) => x.length === 9).map(telBonito).join('; ');
+        pon('c-nombre', d.nombre); pon('c-moviles', tels(d.moviles)); pon('c-fijos', tels(d.fijos));
+        pon('c-personas', (d.personas || []).join('; ') || d.persona); pon('c-emails', (d.emails || []).join('; '));
+        pon('c-web', d.web); pon('c-cif', d.cif); pon('c-poblacion', d.poblacion); pon('c-provincia', d.provincia); pon('c-notas', d.notas);
+        let ofTxt = '';
+        if (d.oficio) {
+          const o = oficiosVivos().find((x) => x.nombre.toLowerCase() === String(d.oficio).toLowerCase());
+          if (o && !st.ofs.includes(o.id)) { st.ofs.push(o.id); pintarChips(); }
+          if (o) ofTxt = ' Oficio sugerido: ' + o.nombre + '.';
+        }
+        aviso('Datos rellenados.' + (ofTxt || ' Elige el oficio.') + ' Revísalos antes de guardar.');
+      };
+      el.querySelector('#b-pegar').onclick = () => hojaPegar(aplicar);
+      const fIn = el.querySelector('#b-foto-in');
+      el.querySelector('#b-foto').onclick = () => { if (!enLinea()) return aviso('Sin conexión: el pantallazo necesita internet.', false); fIn.click(); };
+      fIn.onchange = async () => { const f = fIn.files[0]; fIn.value = ''; if (f) await leerConIA({ archivo: f }, aplicar); };
       const pintarE = () => { el.querySelectorAll('#alta-est [data-n]').forEach((b) => { b.innerHTML = estrella(Number(b.dataset.n) <= st.estrellas ? '#E8A317' : '#E6E1DC', 32); }); el.querySelector('#alta-obra').hidden = !st.estrellas; };
       el.querySelectorAll('#alta-est [data-n]').forEach((b) => b.onclick = () => { const k = Number(b.dataset.n); st.estrellas = st.estrellas === k ? 0 : k; pintarE(); });
     }
@@ -1210,19 +1228,63 @@
     });
   }
 
-  // «Pegar texto»: separa nombre, teléfonos, correos, web y CIF de un texto cualquiera (sin IA).
-  function hojaPegar(el) {
+  // «Pegar texto»: la IA separa los datos; sin conexión o si falla, se hace sin IA.
+  // En ordenador también se puede pegar aquí una imagen (Ctrl+V) y se lee como pantallazo.
+  function hojaPegar(aplicar) {
     abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Pegar texto</div><button class="btn-texto fuerte" id="pg-ok">Rellenar</button></div>
-      <div class="form-grupo" style="margin-top:12px"><div class="campo col"><label for="pg-t">Texto</label><textarea id="pg-t" rows="7" placeholder="Pega aquí un mensaje, una firma de correo o una tarjeta de contacto" autofocus></textarea></div></div>`, (h) => {
+      <div class="form-grupo" style="margin-top:12px"><div class="campo col"><label for="pg-t">Texto</label><textarea id="pg-t" rows="7" placeholder="Pega aquí un mensaje, una firma de correo, una tarjeta de contacto… o una imagen" autofocus></textarea></div></div>
+      <div class="ayuda">Lo lee la IA. Solo se envía lo que pegues aquí.</div>`, (h) => {
       h.querySelector('[data-c]').onclick = cerrarHoja;
-      h.querySelector('#pg-ok').onclick = () => {
-        const d = analizarTexto(h.querySelector('#pg-t').value);
-        const pon = (id, val) => { const i = el.querySelector('#' + id); if (val && i && !i.value.trim()) i.value = val; };
-        pon('c-nombre', d.nombre); pon('c-moviles', d.moviles.join('; ')); pon('c-fijos', d.fijos.join('; '));
-        pon('c-emails', d.emails.join('; ')); pon('c-web', d.web); pon('c-cif', d.cif); pon('c-personas', d.persona);
-        cerrarHoja(); aviso('Datos rellenados. Revísalos y elige el oficio.');
+      h.querySelector('#pg-t').addEventListener('paste', (e) => {
+        const it = [...(e.clipboardData && e.clipboardData.items || [])].find((x) => x.type.startsWith('image/'));
+        if (!it) return;
+        e.preventDefault(); const f = it.getAsFile(); cerrarHoja(); leerConIA({ archivo: f }, aplicar);
+      });
+      h.querySelector('#pg-ok').onclick = async () => {
+        const t = h.querySelector('#pg-t').value.trim(); if (!t) return;
+        cerrarHoja();
+        if (!enLinea()) { aplicar(sinIA(t)); return; }
+        await leerConIA({ texto: t }, aplicar);
       };
     });
+  }
+  function sinIA(t) { const d = analizarTexto(t); return { ...d, personas: d.persona ? [d.persona] : [] }; }
+
+  // Reduce la imagen (lado mayor 1568 px, JPEG) para que pese poco y salga barato.
+  function imagenAJpeg(file) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(file); const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 1568 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('No se puede abrir la imagen')); };
+      img.src = url;
+    });
+  }
+
+  // Llama a la función «leer-proveedor» de Supabase (la clave de la IA nunca está en la web).
+  async function leerConIA({ texto, archivo }, aplicar) {
+    abrirHoja(`<div class="hoja-asa"></div><div class="ia-cargando"><div class="ia-puntos"><span></span><span></span><span></span></div>
+      <div class="hoja-titulo">Leyendo ${archivo ? 'el pantallazo' : 'el texto'}…</div><div class="ayuda" style="padding:6px 0 0">Unos segundos.</div></div>`);
+    capa.onclick = null;
+    try {
+      const cuerpo = texto ? { texto } : { imagen: await imagenAJpeg(archivo), tipo: 'image/jpeg' };
+      const { data, error } = await sb.functions.invoke('leer-proveedor', { body: cuerpo });
+      if (error) {
+        let msg = '';
+        try { msg = (await error.context.json()).error; } catch (_) { /* sin cuerpo */ }
+        throw new Error(msg || 'La IA no ha podido leerlo ahora.');
+      }
+      cerrarHoja(); aplicar(data.datos || {});
+      if (data.quedan !== undefined && data.quedan <= 5) setTimeout(() => aviso(`Te quedan ${data.quedan} lecturas con IA hoy.`, false), 2400);
+    } catch (e) {
+      cerrarHoja();
+      if (texto) { aplicar(sinIA(texto)); setTimeout(() => aviso((e.message || 'La IA no responde.') + ' Se ha rellenado sin IA.', false), 2400); }
+      else aviso(e.message || 'No se ha podido leer el pantallazo.', false);
+    }
   }
   function analizarTexto(t) {
     t = String(t || '');

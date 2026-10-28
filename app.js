@@ -801,7 +801,10 @@
   }
 
   // v1.12.5 — Ver en el mapa los proveedores de un oficio: un punto por población con el número de proveedores
-  function hojaMapaProv(lista, titulo) {
+  function hojaMapaProv(listaVista, titulo, ofId) {
+    // v1.12.7 — En el mapa se ven todos los del oficio (sin la zona) y se puede marcar una zona tocando el mapa
+    let lista = listaVista;
+    if (ofId) { const g = E.zona; E.zona = null; lista = listaFiltrada().filter((p) => p._ofs.some((o) => o.id === ofId)); E.zona = g; }
     const porMuni = new Map(); let sin = 0;
     lista.forEach((p) => {
       if (p._lat == null) { sin++; return; }
@@ -810,36 +813,77 @@
       porMuni.get(k).items.push(p);
     });
     const puntos = [...porMuni.values()];
-    abrirHoja(`<div class="hoja-barra"><span></span><div class="hoja-titulo">${esc(titulo)}</div><button class="btn-texto fuerte" data-c>Cerrar</button></div>
-      <p class="zona-ayuda">${lista.length - sin} en el mapa${sin ? ` · ${sin} sin población` : ''}. Toca un punto para ver quién hay.</p>
+    const st = E.zona ? { ...E.zona } : { lat: null, lon: null, r: 25, nombre: '' };
+    abrirHoja(`<div class="hoja-barra"><button class="btn-texto" data-c>Cerrar</button><div class="hoja-titulo">${esc(titulo)}</div><button class="btn-texto fuerte" data-ok ${st.lat == null ? 'disabled' : ''}>Aplicar zona</button></div>
+      <p class="zona-ayuda">Toca un número para ver quién hay, o toca el mapa para marcar una zona.</p>
       <div class="zona-mapa" id="mp-mapa"><div class="zona-cargando">Cargando mapa…</div></div>
+      <div class="zona-pie">
+        <div class="zona-radios" role="group" aria-label="Radio">${RADIOS.map((r) => `<button class="chip ${r === st.r ? 'on' : ''}" data-r="${r}">${r} km</button>`).join('')}</div>
+        <div class="zona-info" id="mp-info"></div>
+        ${E.zona ? '<button class="btn-texto zona-quitar" data-quitar>Quitar zona</button>' : ''}
+      </div>
       <div class="mp-lista" id="mp-lista"></div>`, (h) => {
       h.classList.add('hoja-zona');
       h.querySelector('[data-c]').onclick = cerrarHoja;
-      const listaEl = h.querySelector('#mp-lista');
+      const listaEl = h.querySelector('#mp-lista'), info = h.querySelector('#mp-info'), okB = h.querySelector('[data-ok]');
+      let mapa = null, circ = null, cen = null, capaPts = [];
+      const dentro = (pt) => st.lat == null || distKm(st.lat, st.lon, pt.lat, pt.lon) <= st.r;
+      const contar = () => {
+        if (st.lat == null) { info.innerHTML = `${lista.length - sin} en el mapa${sin ? ` · ${sin} sin población` : ''}.`; return; }
+        const n = puntos.filter(dentro).reduce((a, pt) => a + pt.items.length, 0);
+        if (!n) {
+          info.innerHTML = desiertoHTML(st.r, true);
+          const b = info.querySelector('[data-ampliar]');
+          if (b) b.onclick = () => { const x = h.querySelector(`[data-r="${b.dataset.ampliar}"]`); if (x) x.click(); };
+        } else info.innerHTML = `<b>${n}</b> proveedor${n === 1 ? '' : 'es'} a menos de ${st.r} km de ${esc(st.nombre)}`;
+        capaPts.forEach(({ m, pt }) => { const el = m.getElement(); if (el) el.classList.toggle('fuera', !dentro(pt)); });
+      };
+      const dibujar = (centrar) => {
+        if (!mapa || st.lat == null) return contar();
+        const ll = [st.lat, st.lon];
+        if (!circ) {
+          circ = L.circle(ll, { radius: st.r * 1000, color: '#00879A', weight: 2, fillColor: '#00879A', fillOpacity: 0.10, interactive: false }).addTo(mapa);
+          cen = L.circleMarker(ll, { radius: 6, color: '#fff', weight: 2, fillColor: '#00879A', fillOpacity: 1, interactive: false }).addTo(mapa);
+        } else { circ.setLatLng(ll); circ.setRadius(st.r * 1000); cen.setLatLng(ll); }
+        if (centrar) mapa.fitBounds(circ.getBounds(), { padding: [20, 20] });
+        okB.disabled = false; contar();
+      };
       const mostrar = (pt) => {
         listaEl.innerHTML = `<div class="mp-pob">${esc(pt.nombre)} · ${pt.items.length}</div>` + pt.items.sort(ordenProv).map((p) =>
           `<a class="mp-fila" href="#/p/${p.id}"><span>${esc(p.nombre)}</span>${p._n ? `<span class="mp-nota">${estrella('#E8A317', 12)} ${p._media.toFixed(1)}</span>` : ''}</a>`).join('');
         listaEl.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => cerrarHoja()));
       };
+      h.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => {
+        st.r = Number(b.dataset.r);
+        h.querySelectorAll('[data-r]').forEach((x) => x.classList.toggle('on', x === b));
+        dibujar(true);
+      });
+      okB.onclick = () => {
+        if (st.lat == null) return;
+        E.zona = { lat: st.lat, lon: st.lon, r: st.r, nombre: st.nombre }; E.orden = 'dist'; E.limite = 60;
+        cerrarHoja(); pintarResultados();
+      };
+      const q = h.querySelector('[data-quitar]');
+      if (q) q.onclick = () => { E.zona = null; if (E.orden === 'dist') E.orden = 'rec'; cerrarHoja(); pintarResultados(); };
+      contar();
       cargarLeaflet().then(() => {
         const div = h.querySelector('#mp-mapa'); if (!div || !div.isConnected) return;
         div.innerHTML = '';
-        const mapa = L.map(div).setView([41.6, 1.7], 8);
+        mapa = L.map(div).setView([41.6, 1.7], 8);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(mapa);
-        if (E.zona) L.circle([E.zona.lat, E.zona.lon], { radius: E.zona.r * 1000, color: '#00879A', weight: 1.5, fillOpacity: 0.06, interactive: false }).addTo(mapa);
-        const capaPts = puntos.map((pt) => {
+        capaPts = puntos.map((pt) => {
           const n = pt.items.length, d = n > 99 ? 34 : n > 9 ? 30 : 26;
           const m = L.marker([pt.lat, pt.lon], { title: pt.nombre, icon: L.divIcon({ className: 'mp-punto', html: `<span>${n}</span>`, iconSize: [d, d] }) }).addTo(mapa);
-          m.on('click', () => mostrar(pt));
-          return m;
+          m.on('click', (e) => { L.DomEvent.stopPropagation(e); mostrar(pt); });
+          return { m, pt };
         });
+        mapa.on('click', (e) => { st.lat = e.latlng.lat; st.lon = e.latlng.lng; st.nombre = muniCercano(st.lat, st.lon); dibujar(false); });
         setTimeout(() => {
           mapa.invalidateSize();
-          if (capaPts.length) mapa.fitBounds(L.featureGroup(capaPts).getBounds(), { padding: [30, 30], maxZoom: 12 });
+          if (st.lat != null) dibujar(true);
+          else if (capaPts.length) mapa.fitBounds(L.featureGroup(capaPts.map((x) => x.m)).getBounds(), { padding: [30, 30], maxZoom: 12 });
         }, 60);
         if (puntos.length === 1) mostrar(puntos[0]);
-        else listaEl.innerHTML = '<div class="mp-pista">El número de cada punto es cuántos proveedores hay en esa población.</div>';
       }).catch(() => {
         const div = h.querySelector('#mp-mapa');
         if (div) div.innerHTML = '<div class="zona-cargando">No se ha podido cargar el mapa. Hace falta conexión.</div>';
@@ -908,7 +952,7 @@
     const ofs = oficiosDeFam(f.id).filter((o) => C.porOf.get(o.id) || o.id === E.of);
     const [bg, fg] = tono(f.nombre);
     const elegidos = E.of ? ofs.filter((o) => o.id === E.of) : ofs;
-    const grupos = elegidos.map((o) => ({ titulo: o.nombre, fam: f.nombre, items: base.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
+    const grupos = elegidos.map((o) => ({ titulo: o.nombre, of: o.id, fam: f.nombre, items: base.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
     z.innerHTML = `
       <div class="cat-banda" style="background:${bg}">
       <div class="cat-cab">
@@ -940,7 +984,7 @@
     const setCat = new Set(deCat.map((p) => p.id));
     const otros = res.filter((p) => !setCat.has(p.id));
     if (E.orden !== 'rec') otros.sort(ordenProv);
-    const grupos = ofsHit.map((o) => ({ titulo: o.nombre, fam: (IDX.fam.get(o.familia_id) || {}).nombre, items: deCat.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
+    const grupos = ofsHit.map((o) => ({ titulo: o.nombre, of: o.id, fam: (IDX.fam.get(o.familia_id) || {}).nombre, items: deCat.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
     const vistaOtros = otros.slice(0, E.limite);
     if (!famsHit.length && !ofsHit.length && !otros.length) {
       z.innerHTML = (E.zona ? desiertoHTML(E.zona.r) : `<div class="vacio"><h2>Sin resultados</h2><p>Nada coincide con «${esc(E.q)}». ¿Lo conoces? Añádelo para el resto del equipo.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`) + (E.soloTrab || E.verInact || E.prov || E.zona ? filtrosHTML() : '');
@@ -983,7 +1027,7 @@
       const g = grupos[Number(b.dataset.g)];
       if (await copiarProveedores(g.items)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#00879A') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.items.length} proveedores copiados. Pégalos en el comparativo.`); }
     });
-    z.querySelectorAll('.ver-mapa').forEach((b) => b.onclick = () => { const g = grupos[Number(b.dataset.gm)]; hojaMapaProv(g.items, g.titulo); });
+    z.querySelectorAll('.ver-mapa').forEach((b) => b.onclick = () => { const g = grupos[Number(b.dataset.gm)]; hojaMapaProv(g.items, g.titulo, g.of); });
     engancharFilas(z);
   }
 

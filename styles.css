@@ -553,3 +553,7 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
   .seccion-cab .copiar-todos { margin-left: 0; padding-left: 0; }
   .seccion-cab .ver-mapa { padding-left: 14px; }
 }
+
+/* v1.12.7 — Marcar zona desde el mapa de un oficio */
+.mp-punto.fuera { opacity: .35; filter: grayscale(1); }
+.hoja-zona .mp-lista { max-height: 24vh; }

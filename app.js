@@ -349,61 +349,79 @@
     });
     setInterval(() => { if (document.visibilityState === 'visible') apuntar(); }, 5 * 60 * 1000);
   }
-  // Al tocar el logo de Contacta: los logos de empresa de la cabecera se deshacen en puntos
-  // que vuelan hasta el globo y forman la «C»; luego los logos vuelven a aparecer.
+  // Al tocar el logo de Contacta: los logos de empresa y el propio logo de Contacta se deshacen
+  // en puntos, giran en remolino alrededor del logo, se mezclan y vuelven a formar el logo completo
+  // (globo, «C» y letras); después reaparecen los logos de empresa.
   let miniEnCurso = false;
+  function puntosDe(im, paso, umbral) {
+    const r = im.getBoundingClientRect(); if (!r.width) return [];
+    const W = Math.round(r.width), H = Math.round(r.height);
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const cx = cv.getContext('2d'); cx.drawImage(im, 0, 0, W, H);
+    const px = cx.getImageData(0, 0, W, H).data; const out = [];
+    for (let y = 0; y < H; y += paso) for (let x = 0; x < W; x += paso) {
+      const i = (y * W + x) * 4;
+      if (px[i + 3] > umbral && !(px[i] > 235 && px[i + 1] > 235 && px[i + 2] > 235)) out.push([r.left + x, r.top + y, `rgb(${px[i]},${px[i + 1]},${px[i + 2]})`]);
+    }
+    return out;
+  }
+  const barajar = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   function miniPortada() {
     if (miniEnCurso) return;
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const logo = document.querySelector('.logo-cab');
     const imgs = [...document.querySelectorAll('.cabecera .logos-mini img')];
-    if (!logo || !imgs.length || !logo.getBoundingClientRect().width) return;
+    if (!logo || !logo.getBoundingClientRect().width) return;
     miniEnCurso = true;
+    const capa = document.createElement('div'); capa.className = 'mini-capa';
+    const acabar = () => { capa.remove(); logo.classList.remove('mini-fuera', 'mini-vuelve'); imgs.forEach((im) => im.classList.remove('mini-fuera', 'mini-vuelve')); miniEnCurso = false; };
     try {
       const L = logo.getBoundingClientRect();
-      // Coordenadas del logo horizontal (viewBox 3.3 13 344 91): «C» al 86 % centrada en (52,54)
-      const k = L.height / 91;
-      const aPantalla = (u, v) => [L.left + (u - 3.3) * k, L.top + (v - 13) * k];
-      const R1 = 22 * 0.86, R2 = 36 * 0.86;
-      const capa = document.createElement('div'); capa.className = 'mini-capa';
-      const [mx, my] = aPantalla(56, 54);
-      const mascara = document.createElement('div'); mascara.className = 'mini-mascara';
-      Object.assign(mascara.style, { left: (mx - 34 * k) + 'px', top: (my - 34 * k) + 'px', width: (68 * k) + 'px', height: (68 * k) + 'px' });
-      capa.appendChild(mascara);
-      const grupos = [[51, 129, '#0BB4D2'], [139, 221, '#B4BD1F'], [231, 311, '#F7334A']];
-      const parts = [];
-      imgs.forEach((im) => {
-        const r = im.getBoundingClientRect(); if (!r.width) return;
-        const cv = document.createElement('canvas'); const W = Math.round(r.width), H = Math.round(r.height);
-        cv.width = W; cv.height = H; const cx = cv.getContext('2d'); cx.drawImage(im, 0, 0, W, H);
-        let px; try { px = cx.getImageData(0, 0, W, H).data; } catch (_) { return; }
-        const pts = [];
-        for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) { const i = (y * W + x) * 4; if (px[i + 3] > 140) pts.push([r.left + x, r.top + y, `rgb(${px[i]},${px[i + 1]},${px[i + 2]})`]); }
-        for (let n = 0; n < Math.min(110, pts.length); n++) parts.push(pts.splice(Math.floor(Math.random() * pts.length), 1)[0]);
-      });
-      parts.forEach((p, i) => {
-        let tx, ty, c1;
-        if (i % 9 === 0) { const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * 5.5 * 0.86; [tx, ty] = aPantalla(52 + 23.6 + rr * Math.cos(a), 54 + rr * Math.sin(a)); c1 = '#35383E'; }
-        else { const g = grupos[i % 3]; const a = (g[0] + Math.random() * (g[1] - g[0])) * Math.PI / 180, rr = R1 + Math.random() * (R2 - R1); [tx, ty] = aPantalla(52 + rr * Math.cos(a), 54 - rr * Math.sin(a)); c1 = g[2]; }
-        const d = document.createElement('i'); d.className = 'mini-part';
-        Object.assign(d.style, { left: p[0] + 'px', top: p[1] + 'px', background: p[2] });
-        capa.appendChild(d);
-        const dx = tx - p[0], dy = ty - p[1];
-        const giro = (Math.random() - 0.5) * 60;
-        const retraso = Math.max(0, (p[0] - (imgs[0].getBoundingClientRect().left)) / 900) * 0.5 + Math.random() * 0.15;
-        d.animate([
-          { transform: 'translate(0,0)', background: p[2], opacity: 1 },
-          { offset: 0.35, transform: `translate(${dx * 0.35 + giro}px,${dy * 0.35 - 30 - Math.random() * 25}px) rotate(90deg)`, background: p[2], opacity: 1 },
-          { offset: 0.85, transform: `translate(${dx}px,${dy}px) rotate(180deg)`, background: c1, opacity: 1 },
-          { transform: `translate(${dx}px,${dy}px) rotate(180deg)`, background: c1, opacity: 0 }
-        ], { duration: 1500, delay: retraso * 1000, easing: 'cubic-bezier(.45,.05,.3,1)', fill: 'both' });
-      });
+      const cx = L.left + L.width / 2, cy = L.top + L.height / 2;
+      // Destinos: los píxeles del propio logo de Contacta (globo, «C», punto y letras) con su color
+      const destinos = barajar(puntosDe(logo, 2, 150));
+      // Orígenes: los logos de empresa y el propio logo de Contacta
+      let origen = [];
+      imgs.forEach((im) => { origen = origen.concat(barajar(puntosDe(im, 2, 140)).slice(0, 170)); });
+      origen = origen.concat(destinos.slice(0, 260));
+      const N = Math.min(640, destinos.length);
+      if (!N) { acabar(); return; }
+      const Rg = Math.max(L.width * 0.42, 80); // radio del remolino (en horizontal; en vertical se aplana)
+      const sentido = Math.random() < 0.5 ? 1 : -1;
+      const DUR = 2900;
+      for (let i = 0; i < N; i++) {
+        const o = origen[i % origen.length]; const d = destinos[i];
+        const el = document.createElement('i'); el.className = 'mini-part';
+        Object.assign(el.style, { left: o[0] + 'px', top: o[1] + 'px', background: o[2] });
+        if (i % 7 === 0) { el.style.width = el.style.height = '4px'; }
+        capa.appendChild(el);
+        // Trayectoria: despegue → espiral alrededor del centro del logo → cierre sobre su sitio
+        const a0 = Math.atan2(o[1] - cy, o[0] - cx), r0 = Math.hypot(o[0] - cx, o[1] - cy);
+        const aD = Math.atan2(d[1] - cy, d[0] - cx), rD = Math.hypot(d[0] - cx, d[1] - cy);
+        const rR = Rg * (0.55 + Math.random() * 0.5);
+        const vueltas = 1.4 + Math.random() * 0.7;
+        const aFin = aD + sentido * 2 * Math.PI * Math.round(vueltas);
+        const pasos = 10, kf = [];
+        for (let s = 0; s <= pasos; s++) {
+          const u = s / pasos;
+          let a, r, col = o[2], esc = 1, fy = 0.45;
+          if (u <= 0.15) { const v = u / 0.15; fy = 1 - 0.55 * v; a = a0 + sentido * v * 0.6; r = r0 + (rR - r0) * v * 0.6 + Math.sin(v * Math.PI) * 18; }
+          else if (u <= 0.7) { const v = (u - 0.15) / 0.55; a = a0 + sentido * (0.6 + v * (vueltas * 2 * Math.PI - 0.6)); r = r0 + (rR - r0) * (0.6 + 0.4 * Math.min(1, v * 2)); col = v > 0.5 ? d[2] : o[2]; esc = 1 + Math.sin(v * Math.PI) * 0.5; }
+          else { const v = (u - 0.7) / 0.3; const ease = 1 - Math.pow(1 - v, 3); const aIni = a0 + sentido * vueltas * 2 * Math.PI; a = aIni + (aFin - aIni) * ease; r = rR + (rD - rR) * ease; fy = 0.45 + 0.55 * ease; col = d[2]; }
+          const x = cx + r * Math.cos(a) - o[0], y = cy + r * Math.sin(a) * fy - o[1];
+          kf.push({ offset: u, transform: `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${esc.toFixed(2)})`, background: col, opacity: 1 });
+        }
+        kf.push({ offset: 1, transform: kf[pasos].transform, background: d[2], opacity: 0 });
+        kf[pasos].offset = 0.94;
+        el.animate(kf, { duration: DUR, delay: Math.random() * 220, easing: 'linear', fill: 'both' });
+      }
       document.body.appendChild(capa);
+      logo.classList.add('mini-fuera');
       imgs.forEach((im) => im.classList.add('mini-fuera'));
-      setTimeout(() => mascara.classList.add('fuera'), 1550);
-      setTimeout(() => imgs.forEach((im) => { im.classList.remove('mini-fuera'); im.classList.add('mini-vuelve'); }), 1900);
-      setTimeout(() => { capa.remove(); imgs.forEach((im) => im.classList.remove('mini-vuelve')); miniEnCurso = false; }, 2600);
-    } catch (e) { console.warn(e); miniEnCurso = false; document.querySelectorAll('.mini-capa').forEach((x) => x.remove()); }
+      setTimeout(() => { logo.classList.remove('mini-fuera'); logo.classList.add('mini-vuelve'); }, DUR - 180);
+      setTimeout(() => imgs.forEach((im) => { im.classList.remove('mini-fuera'); im.classList.add('mini-vuelve'); }), DUR + 50);
+      setTimeout(acabar, DUR + 800);
+    } catch (e) { console.warn(e); acabar(); }
   }
   const lanzarMini = () => setTimeout(miniPortada, 60);
   function mostrarPortada(apuntar) {

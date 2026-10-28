@@ -61,7 +61,8 @@
     pegar: '<path d="M9 4h6v3H9zM7 5H5v16h14V5h-2M8 12h8M8 16h5"/>',
     camara: '<path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="4"/>',
     restaurar: '<path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v4h4"/>',
-    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>'
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>',
+    pin: '<path d="M12 21s-7-6.2-7-12a7 7 0 0114 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>'
   };
   const ico = (n, sz = 20, color = 'currentColor', w = 2) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
   const estrella = (fill, sz = 13) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="${fill}" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>`;
@@ -597,7 +598,7 @@
   }
 
   /* ---------------- Buscador ---------------- */
-  const E = { q: '', fam: 0, of: 0, rueda: 0, prov: '', orden: 'rec', soloTrab: false, verInact: false, limite: 60 };
+  const E = { q: '', fam: 0, of: 0, rueda: 0, prov: '', zona: null, orden: 'rec', soloTrab: false, verInact: false, limite: 60 };
   function familiasOrden() { return D.familias.slice().sort((a, b) => a.orden - b.orden); }
   function oficiosDeFam(famId) { return oficiosVivos().filter((o) => o.familia_id === famId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')); }
 
@@ -650,8 +651,9 @@
           <button class="chip ${E.verInact ? 'on' : ''}" id="f-inact" aria-pressed="${E.verInact}">Ver cerrados</button>
           <label class="sel-chip ${E.prov ? 'on' : ''}" title="Filtrar por provincia"><span class="oculto-vis">Provincia</span>
             <select id="f-prov"><option value="">Todas las provincias</option>${provincias().map((x) => `<option value="${esc(x.k)}" ${E.prov === x.k ? 'selected' : ''}>${esc(x.n)} (${x.c})</option>`).join('')}</select></label>
+          <button class="chip chip-zona ${E.zona ? 'on' : ''}" id="f-zona" title="Limitar a una zona del mapa">${ico('pin', 15, 'currentColor', 1.8)}<span>${E.zona ? `A ${E.zona.r} km de ${esc(E.zona.nombre)}` : 'Zona'}</span></button>
           <label class="sel-chip ${E.orden !== 'rec' ? 'on' : ''}" title="Ordenar la lista"><span class="oculto-vis">Ordenar</span>
-            <select id="f-orden"><option value="rec" ${E.orden === 'rec' ? 'selected' : ''}>Orden: recomendados</option><option value="est" ${E.orden === 'est' ? 'selected' : ''}>Orden: más estrellas</option><option value="az" ${E.orden === 'az' ? 'selected' : ''}>Orden: nombre A-Z</option></select></label>
+            <select id="f-orden"><option value="rec" ${E.orden === 'rec' ? 'selected' : ''}>Orden: recomendados</option>${E.zona ? `<option value="dist" ${E.orden === 'dist' ? 'selected' : ''}>Orden: más cercanos</option>` : ''}<option value="est" ${E.orden === 'est' ? 'selected' : ''}>Orden: más estrellas</option><option value="az" ${E.orden === 'az' ? 'selected' : ''}>Orden: nombre A-Z</option></select></label>
         </div>`;
   }
   function engancharFiltros(z) {
@@ -660,13 +662,111 @@
     q('#f-inact').onclick = () => { E.verInact = !E.verInact; pintarResultados(); };
     q('#f-prov').onchange = (e) => { E.prov = e.target.value; pintarResultados(); };
     q('#f-orden').onchange = (e) => { E.orden = e.target.value; pintarResultados(); };
+    q('#f-zona').onclick = () => hojaZona();
   }
   function listaFiltrada() {
     let l = D.prov.filter((p) => !p.eliminado_en && (E.verInact || p.estado === 'activo'));
     if (E.soloTrab) l = l.filter((p) => p._trab);
     if (E.prov) l = l.filter((p) => norm(p.provincia) === E.prov);
+    if (E.zona) {
+      const z = E.zona;
+      l = l.filter((p) => { if (p._lat == null) return false; p._dist = distKm(z.lat, z.lon, p._lat, p._lon); return p._dist <= z.r; });
+    }
     return l;
   }
+  /* ---------------- v1.12.2 — Filtro por zona (mapa y círculo) ---------------- */
+  function distKm(la1, lo1, la2, lo2) {
+    const R = 6371, r = Math.PI / 180, dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r;
+    const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dLo / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+  // Municipio más cercano a un punto (para poner nombre al centro del círculo)
+  function muniCercano(lat, lon) {
+    let mejor = null, dm = Infinity;
+    (D.munis || []).forEach((m) => { const d = distKm(lat, lon, m.lat, m.lon); if (d < dm) { dm = d; mejor = m; } });
+    return mejor && dm < 30 ? mejor.nombre : 'el punto elegido';
+  }
+  let leafletListo = null;
+  function cargarLeaflet() {
+    if (window.L) return Promise.resolve();
+    if (leafletListo) return leafletListo;
+    leafletListo = new Promise((ok, mal) => {
+      const css = document.createElement('link'); css.rel = 'stylesheet';
+      css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
+      const js = document.createElement('script'); js.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+      js.onload = () => ok(); js.onerror = () => { leafletListo = null; mal(new Error('mapa')); }; document.head.appendChild(js);
+    });
+    return leafletListo;
+  }
+  const RADIOS = [5, 10, 25, 50, 100, 200];
+  function hojaZona() {
+    const ini = E.zona ? { ...E.zona } : { lat: null, lon: null, r: 25, nombre: '' };
+    const st = { ...ini };
+    abrirHoja(`<div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Zona</div><button class="btn-texto fuerte" data-ok ${st.lat == null ? 'disabled' : ''}>Aplicar</button></div>
+      <p class="zona-ayuda">Toca el mapa donde está la obra.</p>
+      <div class="zona-mapa" id="zona-mapa"><div class="zona-cargando">Cargando mapa…</div></div>
+      <div class="zona-pie">
+        <div class="zona-radios" role="group" aria-label="Radio">${RADIOS.map((r) => `<button class="chip ${r === st.r ? 'on' : ''}" data-r="${r}">${r} km</button>`).join('')}</div>
+        <div class="zona-info" id="zona-info"></div>
+        <div class="zona-botones">
+          <button class="zona-yo" data-yo>${ico('pin', 16, 'currentColor', 1.8)} Mi ubicación</button>
+          ${E.zona ? '<button class="btn-texto zona-quitar" data-quitar>Quitar zona</button>' : ''}
+        </div>
+      </div>`, (h) => {
+      h.classList.add('hoja-zona');
+      const info = h.querySelector('#zona-info'), okB = h.querySelector('[data-ok]');
+      let mapa = null, circ = null, cen = null;
+      const base = () => { const g = E.zona; E.zona = null; const l = listaFiltrada(); E.zona = g; return l; };
+      const contar = () => {
+        if (st.lat == null) { info.textContent = 'Aún no has elegido un punto.'; return; }
+        const n = base().filter((p) => p._lat != null && distKm(st.lat, st.lon, p._lat, p._lon) <= st.r).length;
+        info.innerHTML = `<b>${n}</b> proveedor${n === 1 ? '' : 'es'} a menos de ${st.r} km de ${esc(st.nombre)}`;
+      };
+      const dibujar = (centrar) => {
+        if (!mapa || st.lat == null) return;
+        const ll = [st.lat, st.lon];
+        if (!circ) {
+          circ = L.circle(ll, { radius: st.r * 1000, color: '#00879A', weight: 2, fillColor: '#00879A', fillOpacity: 0.12 }).addTo(mapa);
+          cen = L.circleMarker(ll, { radius: 6, color: '#fff', weight: 2, fillColor: '#00879A', fillOpacity: 1 }).addTo(mapa);
+        } else { circ.setLatLng(ll); circ.setRadius(st.r * 1000); cen.setLatLng(ll); }
+        if (centrar) mapa.fitBounds(circ.getBounds(), { padding: [20, 20] });
+        okB.disabled = false; contar();
+      };
+      const poner = (lat, lon, centrar) => { st.lat = lat; st.lon = lon; st.nombre = muniCercano(lat, lon); dibujar(centrar); };
+      h.querySelector('[data-c]').onclick = cerrarHoja;
+      okB.onclick = () => {
+        if (st.lat == null) return;
+        E.zona = { lat: st.lat, lon: st.lon, r: st.r, nombre: st.nombre }; E.orden = 'dist'; E.limite = 60;
+        cerrarHoja(); pintarResultados();
+      };
+      const q = h.querySelector('[data-quitar]');
+      if (q) q.onclick = () => { E.zona = null; if (E.orden === 'dist') E.orden = 'rec'; cerrarHoja(); pintarResultados(); };
+      h.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => {
+        st.r = Number(b.dataset.r);
+        h.querySelectorAll('[data-r]').forEach((x) => x.classList.toggle('on', x === b));
+        dibujar(true); if (st.lat == null) contar();
+      });
+      h.querySelector('[data-yo]').onclick = () => {
+        if (!navigator.geolocation) return aviso('Este dispositivo no da la ubicación', false);
+        info.textContent = 'Buscando tu ubicación…';
+        navigator.geolocation.getCurrentPosition((pos) => poner(pos.coords.latitude, pos.coords.longitude, true),
+          () => { aviso('No se ha podido obtener la ubicación', false); contar(); }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+      };
+      contar();
+      cargarLeaflet().then(() => {
+        const div = h.querySelector('#zona-mapa'); if (!div || !div.isConnected) return;
+        div.innerHTML = '';
+        mapa = L.map(div, { zoomControl: true, attributionControl: true }).setView([41.6, 1.7], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(mapa);
+        mapa.on('click', (e) => poner(e.latlng.lat, e.latlng.lng, false));
+        setTimeout(() => { mapa.invalidateSize(); dibujar(true); }, 60);
+      }).catch(() => {
+        const div = h.querySelector('#zona-mapa');
+        if (div) div.innerHTML = '<div class="zona-cargando">No se ha podido cargar el mapa. Hace falta conexión.</div>';
+      });
+    });
+  }
+
   // Provincias que hay en la base (sin distinguir mayúsculas ni acentos), de más a menos proveedores
   function provincias() {
     const m = new Map();
@@ -675,6 +775,7 @@
     return [...m.values()].sort((a, b) => b.c - a.c || a.n.localeCompare(b.n, 'es'));
   }
   const ordenProv = (a, b) => {
+    if (E.orden === 'dist' && E.zona) return (a._dist - b._dist) || a.nombre.localeCompare(b.nombre, 'es');
     if (E.orden === 'est') return (b._media - a._media) || (b._n - a._n) || a.nombre.localeCompare(b.nombre, 'es');
     if (E.orden === 'az') return a.nombre.localeCompare(b.nombre, 'es');
     return (b._trab - a._trab) || (b._media - a._media) || a.nombre.localeCompare(b.nombre, 'es');
@@ -761,7 +862,7 @@
     const grupos = ofsHit.map((o) => ({ titulo: o.nombre, fam: (IDX.fam.get(o.familia_id) || {}).nombre, items: deCat.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
     const vistaOtros = otros.slice(0, E.limite);
     if (!famsHit.length && !ofsHit.length && !otros.length) {
-      z.innerHTML = `<div class="vacio"><h2>Sin resultados</h2><p>Nada coincide con «${esc(E.q)}». ¿Lo conoces? Añádelo para el resto del equipo.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>` + (E.soloTrab || E.verInact || E.prov ? filtrosHTML() : '');
+      z.innerHTML = `<div class="vacio"><h2>Sin resultados</h2><p>Nada coincide con «${esc(E.q)}». ¿Lo conoces? Añádelo para el resto del equipo.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>` + (E.soloTrab || E.verInact || E.prov || E.zona ? filtrosHTML() : '');
       engancharFiltros(z);
       return;
     }

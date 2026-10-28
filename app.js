@@ -387,9 +387,10 @@
       origen = origen.concat(destinos.slice(0, 260));
       const N = Math.min(640, destinos.length);
       if (!N) { acabar(); return; }
-      const Rg = Math.max(L.width * 0.42, 80); // radio del remolino (en horizontal; en vertical se aplana)
+      const Rg = Math.max(Math.min(window.innerWidth, 1100) * 0.42, 140); // radio del remolino: se reparte por la página
+      const fyR = Math.min(0.9, (window.innerHeight * 0.4) / Rg); // aplanado vertical según el alto de la pantalla
       const sentido = Math.random() < 0.5 ? 1 : -1;
-      const DUR = 2900;
+      const DUR = 4200;
       for (let i = 0; i < N; i++) {
         const o = origen[i % origen.length]; const d = destinos[i];
         const el = document.createElement('i'); el.className = 'mini-part';
@@ -399,16 +400,18 @@
         // Trayectoria: despegue → espiral alrededor del centro del logo → cierre sobre su sitio
         const a0 = Math.atan2(o[1] - cy, o[0] - cx), r0 = Math.hypot(o[0] - cx, o[1] - cy);
         const aD = Math.atan2(d[1] - cy, d[0] - cx), rD = Math.hypot(d[0] - cx, d[1] - cy);
-        const rR = Rg * (0.55 + Math.random() * 0.5);
-        const vueltas = 1.4 + Math.random() * 0.7;
-        const aFin = aD + sentido * 2 * Math.PI * Math.round(vueltas);
-        const pasos = 10, kf = [];
+        const rR = Rg * (0.3 + Math.random() * 0.9);
+        const vueltas = 0.7 + Math.random() * 0.5;
+        const aIni = a0 + sentido * vueltas * 2 * Math.PI;
+        const resto = (((sentido * (aD - aIni)) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        const aFin = aIni + sentido * resto; // cierra sin dar otra vuelta entera
+        const pasos = 16, kf = [];
         for (let s = 0; s <= pasos; s++) {
           const u = s / pasos;
-          let a, r, col = o[2], esc = 1, fy = 0.45;
-          if (u <= 0.15) { const v = u / 0.15; fy = 1 - 0.55 * v; a = a0 + sentido * v * 0.6; r = r0 + (rR - r0) * v * 0.6 + Math.sin(v * Math.PI) * 18; }
-          else if (u <= 0.7) { const v = (u - 0.15) / 0.55; a = a0 + sentido * (0.6 + v * (vueltas * 2 * Math.PI - 0.6)); r = r0 + (rR - r0) * (0.6 + 0.4 * Math.min(1, v * 2)); col = v > 0.5 ? d[2] : o[2]; esc = 1 + Math.sin(v * Math.PI) * 0.5; }
-          else { const v = (u - 0.7) / 0.3; const ease = 1 - Math.pow(1 - v, 3); const aIni = a0 + sentido * vueltas * 2 * Math.PI; a = aIni + (aFin - aIni) * ease; r = rR + (rD - rR) * ease; fy = 0.45 + 0.55 * ease; col = d[2]; }
+          let a, r, col = o[2], esc = 1, fy = fyR;
+          if (u <= 0.15) { const v = u / 0.15; fy = 1 + (fyR - 1) * v; a = a0 + sentido * v * 0.6; r = r0 + (rR - r0) * v * 0.6 + Math.sin(v * Math.PI) * 18; }
+          else if (u <= 0.6) { const v = (u - 0.15) / 0.45; a = a0 + sentido * (0.6 + v * (vueltas * 2 * Math.PI - 0.6)); r = r0 + (rR - r0) * (0.6 + 0.4 * Math.min(1, v * 2)); col = v > 0.5 ? d[2] : o[2]; esc = 1 + Math.sin(v * Math.PI) * 0.5; }
+          else { const v = (u - 0.6) / 0.4; const ease = 1 - Math.pow(1 - v, 2.2); a = aIni + (aFin - aIni) * ease; r = rR + (rD - rR) * ease; fy = fyR + (1 - fyR) * ease; col = d[2]; }
           const x = cx + r * Math.cos(a) - o[0], y = cy + r * Math.sin(a) * fy - o[1];
           kf.push({ offset: u, transform: `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${esc.toFixed(2)})`, background: col, opacity: 1 });
         }

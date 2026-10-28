@@ -654,7 +654,7 @@
           <button class="chip ${E.verInact ? 'on' : ''}" id="f-inact" aria-pressed="${E.verInact}">Ver cerrados</button>
           <label class="sel-chip ${E.prov ? 'on' : ''}" title="Filtrar por provincia"><span class="oculto-vis">Provincia</span>
             <select id="f-prov"><option value="">Todas las provincias</option>${provincias().map((x) => `<option value="${esc(x.k)}" ${E.prov === x.k ? 'selected' : ''}>${esc(x.n)} (${x.c})</option>`).join('')}</select></label>
-          <button class="chip chip-zona ${E.zona ? 'on' : ''}" id="f-zona" title="Limitar a una zona del mapa">${ico('pin', 15, 'currentColor', 1.8)}<span>${E.zona ? `A ${E.zona.r} km de ${esc(E.zona.nombre)}` : 'Zona'}</span></button>
+          <button class="chip chip-zona ${E.zona ? 'on' : ''}" id="f-zona" title="Ver en el mapa y marcar una zona">${ico('pin', 15, 'currentColor', 1.8)}<span>${E.zona ? `A ${E.zona.r} km de ${esc(E.zona.nombre)}` : 'Mapa'}</span></button>
           <label class="sel-chip ${E.orden !== 'rec' ? 'on' : ''}" title="Ordenar la lista"><span class="oculto-vis">Ordenar</span>
             <select id="f-orden"><option value="rec" ${E.orden === 'rec' ? 'selected' : ''}>Orden: recomendados</option>${E.zona ? `<option value="dist" ${E.orden === 'dist' ? 'selected' : ''}>Orden: más cercanos</option>` : ''}<option value="est" ${E.orden === 'est' ? 'selected' : ''}>Orden: más estrellas</option><option value="az" ${E.orden === 'az' ? 'selected' : ''}>Orden: nombre A-Z</option></select></label>
         </div>`;
@@ -665,7 +665,7 @@
     q('#f-inact').onclick = () => { E.verInact = !E.verInact; pintarResultados(); };
     q('#f-prov').onchange = (e) => { E.prov = e.target.value; pintarResultados(); };
     q('#f-orden').onchange = (e) => { E.orden = e.target.value; pintarResultados(); };
-    q('#f-zona').onclick = () => hojaZona();
+    q('#f-zona').onclick = () => abrirMapaVista();
     z.querySelectorAll('[data-ampliar]').forEach((b) => b.onclick = () => { if (E.zona) { E.zona.r = Number(b.dataset.ampliar); pintarResultados(); } });
   }
   function listaFiltrada() {
@@ -801,10 +801,27 @@
   }
 
   // v1.12.5 — Ver en el mapa los proveedores de un oficio: un punto por población con el número de proveedores
-  function hojaMapaProv(listaVista, titulo, ofId) {
+  // v1.12.8 — El botón «Mapa» de los filtros (sustituye a «Zona») abre el mapa con lo que se está viendo
+  function abrirMapaVista() {
+    let titulo = 'Todos los proveedores', pred = () => true;
+    if (E.q.trim()) {
+      const g = E.zona; E.zona = null; const ids = new Set(buscar(E.q, listaFiltrada()).map((p) => p.id)); E.zona = g;
+      titulo = `«${E.q.trim()}»`; pred = (p) => ids.has(p.id);
+    } else if (E.fam && IDX.fam.get(E.fam)) {
+      const of = E.of ? IDX.of.get(E.of) : null;
+      if (of) { titulo = of.nombre; pred = (p) => p._ofs.some((o) => o.id === of.id); }
+      else { titulo = IDX.fam.get(E.fam).nombre; pred = (p) => p._ofs.some((o) => o.familia_id === E.fam); }
+    } else if (E.rueda) {
+      const f = familiasOrden()[E.rueda - 1];
+      if (f) { titulo = f.nombre; pred = (p) => p._ofs.some((o) => o.familia_id === f.id); }
+    }
+    hojaMapaProv(null, titulo, null, pred);
+  }
+  function hojaMapaProv(listaVista, titulo, ofId, pred) {
     // v1.12.7 — En el mapa se ven todos los del oficio (sin la zona) y se puede marcar una zona tocando el mapa
     let lista = listaVista;
-    if (ofId) { const g = E.zona; E.zona = null; lista = listaFiltrada().filter((p) => p._ofs.some((o) => o.id === ofId)); E.zona = g; }
+    if (ofId) pred = (p) => p._ofs.some((o) => o.id === ofId);
+    if (pred) { const g = E.zona; E.zona = null; lista = listaFiltrada().filter(pred); E.zona = g; }
     const porMuni = new Map(); let sin = 0;
     lista.forEach((p) => {
       if (p._lat == null) { sin++; return; }

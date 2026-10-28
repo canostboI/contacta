@@ -544,3 +544,12 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .mp-fila { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid #E7EAEE; color: #575049; text-decoration: none; font-size: 15px; }
 .mp-nota { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; color: #736A63; white-space: nowrap; }
 .mp-pista { font-size: 13px; color: #736A63; padding: 6px 0; }
+
+/* v1.12.6 — Cabecera del oficio en el móvil: título arriba y botones (Copiar todos · Mapa) debajo */
+@media (max-width: 640px) {
+  .seccion-cab { flex-wrap: wrap; row-gap: 0; align-items: baseline; }
+  .seccion-cab h2 { flex: 0 1 auto; max-width: calc(100% - 56px); }
+  .seccion-cab > span { flex: 1 1 40px; }
+  .seccion-cab .copiar-todos { margin-left: 0; padding-left: 0; }
+  .seccion-cab .ver-mapa { padding-left: 14px; }
+}

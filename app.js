@@ -1037,7 +1037,7 @@
       <form id="f-prov" novalidate>
       <div class="barra-nav"><a class="btn-texto" href="${editar ? '#/p/' + p.id : '#/'}">Cancelar</a><div class="hoja-titulo">${editar ? 'Editar proveedor' : 'Nuevo proveedor'}</div><button class="btn-texto fuerte" type="submit" id="g-btn">Guardar</button></div>
       ${editar ? '' : `<div class="etiqueta-sec" style="padding:14px 36px 6px">Rellenar automáticamente</div>
-      <div class="relleno"><button type="button" class="btn-blanco" id="b-pegar">${ico('pegar', 18, '#575049')}Pegar texto</button>
+      <div class="relleno"><button type="button" class="btn-blanco" id="b-pegar">${ico('pegar', 18, '#575049')}Pegar texto o imagen</button>
         <button type="button" class="btn-blanco" id="b-foto">${ico('camara', 18, '#575049')}Pantallazo</button>
         <input type="file" id="b-foto-in" accept="image/*" hidden></div>
       <div class="ayuda">Pega un mensaje de WhatsApp, una firma de correo o una tarjeta, o sube un pantallazo, y la IA rellena los datos. Revísalos antes de guardar.</div>`}
@@ -1231,7 +1231,7 @@
   // «Pegar texto»: la IA separa los datos; sin conexión o si falla, se hace sin IA.
   // En ordenador también se puede pegar aquí una imagen (Ctrl+V) y se lee como pantallazo.
   function hojaPegar(aplicar) {
-    abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Pegar texto</div><button class="btn-texto fuerte" id="pg-ok">Rellenar</button></div>
+    abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Pegar texto o imagen</div><button class="btn-texto fuerte" id="pg-ok">Rellenar</button></div>
       <div class="form-grupo" style="margin-top:12px"><div class="campo col"><label for="pg-t">Texto</label><textarea id="pg-t" rows="7" placeholder="Pega aquí un mensaje, una firma de correo, una tarjeta de contacto… o una imagen" autofocus></textarea></div></div>
       <div class="ayuda">Lo lee la IA. Solo se envía lo que pegues aquí.</div>`, (h) => {
       h.querySelector('[data-c]').onclick = cerrarHoja;

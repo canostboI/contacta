@@ -1035,8 +1035,7 @@
   function gruposHTML(grupos) {
     return grupos.map((g, gi) => `
       <div class="seccion-cab"><h2>${esc(g.titulo)}</h2><span>${g.items.length}</span>
-        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#00879A')}<span>Copiar todos</span></button>
-        <button class="ver-mapa" data-gm="${gi}" title="Ver en el mapa">${ico('pin', 16, '#00879A', 1.8)}<span>Mapa</span></button></div>
+        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#00879A')}<span>Copiar todos</span></button></div>
       <div class="tarjeta">${g.items.map((p) => filaHTML(p, g.fam)).join('')}</div>`).join('');
   }
   function engancharGrupos(z, grupos) {
@@ -1044,7 +1043,6 @@
       const g = grupos[Number(b.dataset.g)];
       if (await copiarProveedores(g.items)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#00879A') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.items.length} proveedores copiados. Pégalos en el comparativo.`); }
     });
-    z.querySelectorAll('.ver-mapa').forEach((b) => b.onclick = () => { const g = grupos[Number(b.dataset.gm)]; hojaMapaProv(g.items, g.titulo, g.of); });
     engancharFilas(z);
   }
 

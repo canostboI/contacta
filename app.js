@@ -351,7 +351,7 @@
     setInterval(() => { if (document.visibilityState === 'visible') apuntar(); }, 5 * 60 * 1000);
   }
   // Al tocar el logo de Contacta: los logos de empresa y el propio logo de Contacta se deshacen
-  // en puntos, giran en remolino alrededor del logo, se mezclan y vuelven a formar el logo completo
+  // en puntos que caen por toda la pantalla, rebotan en el suelo y vuelven a subir a formar el logo completo
   // (globo, «C» y letras); después reaparecen los logos de empresa.
   let miniEnCurso = false;
   function puntosDe(im, paso, umbral) {
@@ -387,36 +387,33 @@
       origen = origen.concat(destinos.slice(0, 260));
       const N = Math.min(640, destinos.length);
       if (!N) { acabar(); return; }
-      const Rg = Math.max(Math.min(window.innerWidth, 1100) * 0.42, 140); // radio del remolino: se reparte por la página
-      const fyR = Math.min(0.9, (window.innerHeight * 0.4) / Rg); // aplanado vertical según el alto de la pantalla
-      const sentido = Math.random() < 0.5 ? 1 : -1;
-      const DUR = 4200;
+      const DUR = 4600;
       for (let i = 0; i < N; i++) {
         const o = origen[i % origen.length]; const d = destinos[i];
         const el = document.createElement('i'); el.className = 'mini-part';
         Object.assign(el.style, { left: o[0] + 'px', top: o[1] + 'px', background: o[2] });
         if (i % 7 === 0) { el.style.width = el.style.height = '4px'; }
         capa.appendChild(el);
-        // Trayectoria: despegue → espiral alrededor del centro del logo → cierre sobre su sitio
-        const a0 = Math.atan2(o[1] - cy, o[0] - cx), r0 = Math.hypot(o[0] - cx, o[1] - cy);
-        const aD = Math.atan2(d[1] - cy, d[0] - cx), rD = Math.hypot(d[0] - cx, d[1] - cy);
-        const rR = Rg * (0.3 + Math.random() * 0.9);
-        const vueltas = 0.7 + Math.random() * 0.5;
-        const aIni = a0 + sentido * vueltas * 2 * Math.PI;
-        const resto = (((sentido * (aD - aIni)) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-        const aFin = aIni + sentido * resto; // cierra sin dar otra vuelta entera
-        const pasos = 16, kf = [];
+        // Trayectoria: pequeño salto → caída con gravedad por toda la pantalla (con rebote) →
+        // reposo en el suelo → vuelven a subir y se juntan en el logo
+        const VW = window.innerWidth, VH = window.innerHeight;
+        const sx = Math.random() * VW;                         // dónde cae, en todo el ancho
+        const sy = VH - 6 - Math.pow(Math.random(), 2) * VH * 0.35; // cerca del suelo, algunos más arriba
+        const vx0 = (Math.random() - 0.5) * 80, alto = 25 + Math.random() * 45; // salto inicial
+        const rebote = 12 + Math.random() * 28;
+        const pasos = 24, kf = [];
         for (let s = 0; s <= pasos; s++) {
           const u = s / pasos;
-          let a, r, col = o[2], esc = 1, fy = fyR;
-          if (u <= 0.15) { const v = u / 0.15; fy = 1 + (fyR - 1) * v; a = a0 + sentido * v * 0.6; r = r0 + (rR - r0) * v * 0.6 + Math.sin(v * Math.PI) * 18; }
-          else if (u <= 0.6) { const v = (u - 0.15) / 0.45; a = a0 + sentido * (0.6 + v * (vueltas * 2 * Math.PI - 0.6)); r = r0 + (rR - r0) * (0.6 + 0.4 * Math.min(1, v * 2)); col = v > 0.5 ? d[2] : o[2]; esc = 1 + Math.sin(v * Math.PI) * 0.5; }
-          else { const v = (u - 0.6) / 0.4; const ease = 1 - Math.pow(1 - v, 2.2); a = aIni + (aFin - aIni) * ease; r = rR + (rD - rR) * ease; fy = fyR + (1 - fyR) * ease; col = d[2]; }
-          const x = cx + r * Math.cos(a) - o[0], y = cy + r * Math.sin(a) * fy - o[1];
-          kf.push({ offset: u, transform: `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${esc.toFixed(2)})`, background: col, opacity: 1 });
+          let x, y, col = o[2], esc = 1;
+          if (u <= 0.12) { const v = u / 0.12; x = o[0] + vx0 * v; y = o[1] - alto * Math.sin(v * Math.PI / 2); }
+          else if (u <= 0.42) { const v = (u - 0.12) / 0.3; const x1 = o[0] + vx0, y1 = o[1] - alto; x = x1 + (sx - x1) * v; y = y1 + (sy - y1) * v * v; } // gravedad
+          else if (u <= 0.52) { const v = (u - 0.42) / 0.1; x = sx; y = sy - rebote * Math.sin(v * Math.PI); }
+          else if (u <= 0.6) { x = sx; y = sy; }
+          else { const v = (u - 0.6) / 0.4; const ease = v < 0.5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2; x = sx + (d[0] - sx) * ease; y = sy + (d[1] - sy) * ease - Math.sin(v * Math.PI) * 60; col = v > 0.3 ? d[2] : o[2]; esc = 1 + Math.sin(v * Math.PI) * 0.4; }
+          kf.push({ offset: u, transform: `translate(${(x - o[0]).toFixed(1)}px,${(y - o[1]).toFixed(1)}px) scale(${esc.toFixed(2)})`, background: col, opacity: 1 });
         }
         kf.push({ offset: 1, transform: kf[pasos].transform, background: d[2], opacity: 0 });
-        kf[pasos].offset = 0.94;
+        kf[pasos].offset = 0.97;
         el.animate(kf, { duration: DUR, delay: Math.random() * 220, easing: 'linear', fill: 'both' });
       }
       document.body.appendChild(capa);

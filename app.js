@@ -663,6 +663,7 @@
     q('#f-prov').onchange = (e) => { E.prov = e.target.value; pintarResultados(); };
     q('#f-orden').onchange = (e) => { E.orden = e.target.value; pintarResultados(); };
     q('#f-zona').onclick = () => hojaZona();
+    z.querySelectorAll('[data-ampliar]').forEach((b) => b.onclick = () => { if (E.zona) { E.zona.r = Number(b.dataset.ampliar); pintarResultados(); } });
   }
   function listaFiltrada() {
     let l = D.prov.filter((p) => !p.eliminado_en && (E.verInact || p.estado === 'activo'));
@@ -699,6 +700,29 @@
     return leafletListo;
   }
   const RADIOS = [5, 10, 25, 50, 100, 200];
+  const radioSig = (r) => RADIOS.find((x) => x > r) || 0;
+  // v1.12.3 — Sorpresa cuando no hay nadie en la zona: un desierto con una bola de paja rodando
+  const FRASES_DESIERTO = [
+    'Aquí no hay ni un alma. Solo pasa una bola de paja.',
+    'Silencio absoluto. Ni un paleta a la vista.',
+    'Zona virgen: ningún proveedor… de momento.',
+    'Por aquí solo hay grillos. Y no hacen reformas.',
+    'Ni grúas, ni furgonetas, ni nadie. Tranquilidad total.'
+  ];
+  function desiertoHTML(r, compacto) {
+    const frase = FRASES_DESIERTO[Math.floor(Math.random() * FRASES_DESIERTO.length)];
+    const sig = radioSig(r);
+    return `<div class="desierto ${compacto ? 'compacto' : ''}">
+      <svg class="desierto-esc" viewBox="0 0 320 110" aria-hidden="true">
+        <circle class="d-sol" cx="262" cy="30" r="14" fill="#FFD27A"/>
+        <path d="M0 92 Q80 82 160 90 T320 88 V110 H0Z" fill="#F4E3C3"/>
+        <g class="d-cactus" fill="#A9AC1A"><rect x="56" y="48" width="12" height="46" rx="6"/><rect x="42" y="60" width="8" height="20" rx="4"/><rect x="42" y="72" width="18" height="8" rx="4"/><rect x="74" y="54" width="8" height="18" rx="4"/><rect x="64" y="64" width="18" height="8" rx="4"/></g>
+        <g class="d-bola"><g class="d-giro"><circle cx="0" cy="0" r="11" fill="none" stroke="#C39A5B" stroke-width="2"/><path d="M-9 -4 Q0 4 9 -5 M-7 6 Q0 -6 8 7 M-2 -10 Q4 0 -3 10 M-10 2 Q-2 -2 10 1" fill="none" stroke="#B0884A" stroke-width="1.5" stroke-linecap="round"/></g></g>
+      </svg>
+      <p class="desierto-txt">${esc(frase)}</p>
+      ${compacto ? (sig ? `<button class="chip on" data-ampliar="${sig}">Ampliar a ${sig} km</button>` : '') : `<div class="desierto-btns">${sig ? `<button class="btn-lleno" data-ampliar="${sig}">Ampliar a ${sig} km</button>` : ''}<a class="btn-texto fuerte" href="#/alta">Añadir proveedor</a></div>`}
+    </div>`;
+  }
   function hojaZona() {
     const ini = E.zona ? { ...E.zona } : { lat: null, lon: null, r: 25, nombre: '' };
     const st = { ...ini };
@@ -720,6 +744,12 @@
       const contar = () => {
         if (st.lat == null) { info.textContent = 'Aún no has elegido un punto.'; return; }
         const n = base().filter((p) => p._lat != null && distKm(st.lat, st.lon, p._lat, p._lon) <= st.r).length;
+        if (!n) {
+          info.innerHTML = desiertoHTML(st.r, true);
+          const b = info.querySelector('[data-ampliar]');
+          if (b) b.onclick = () => { const r = Number(b.dataset.ampliar); const x = h.querySelector(`[data-r="${r}"]`); if (x) x.click(); };
+          return;
+        }
         info.innerHTML = `<b>${n}</b> proveedor${n === 1 ? '' : 'es'} a menos de ${st.r} km de ${esc(st.nombre)}`;
       };
       const dibujar = (centrar) => {
@@ -805,6 +835,7 @@
     z.innerHTML = `<div class="rueda-cab"><span class="etiqueta-sec">Familias · ${fams.length}</span><span style="font-size:13px;color:var(--sec)">Gira la rueda para filtrar los oficios</span></div><div id="rueda"></div>
       ${filtrosHTML()}
       <div class="seccion-cab"><h2 id="of-tit">Oficios</h2><span id="of-n"></span></div>
+      ${!ofs.length && E.zona ? desiertoHTML(E.zona.r) : ''}
       <div class="rejilla">${ofs.map(({ o, f }) => {
         const [bg, fg] = tono(f.nombre); const n = C.porOf.get(o.id) || 0;
         return `<a class="cat cat-color" href="#/f/${f.id}/${o.id}" data-fam="${f.id}" title="${esc(f.nombre)}" style="background:${bg}"><span class="cat-ico" style="background:#fff">${icoFam(f.nombre, 24, fg)}</span>
@@ -840,7 +871,7 @@
       </div>
       </div>
       ${filtrosHTML()}
-      ${grupos.length ? gruposHTML(grupos) : `<div class="vacio"><p>No hay proveedores aquí${E.soloTrab ? ' con los que hayamos trabajado' : ''}.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`}
+      ${grupos.length ? gruposHTML(grupos) : E.zona ? desiertoHTML(E.zona.r) : `<div class="vacio"><p>No hay proveedores aquí${E.soloTrab ? ' con los que hayamos trabajado' : ''}.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`}
       <div style="height:32px"></div>`;
     engancharFiltros(z);
     engancharGrupos(z, grupos);
@@ -862,7 +893,7 @@
     const grupos = ofsHit.map((o) => ({ titulo: o.nombre, fam: (IDX.fam.get(o.familia_id) || {}).nombre, items: deCat.filter((p) => p._ofs.some((x) => x.id === o.id)).sort(ordenProv) })).filter((g) => g.items.length);
     const vistaOtros = otros.slice(0, E.limite);
     if (!famsHit.length && !ofsHit.length && !otros.length) {
-      z.innerHTML = `<div class="vacio"><h2>Sin resultados</h2><p>Nada coincide con «${esc(E.q)}». ¿Lo conoces? Añádelo para el resto del equipo.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>` + (E.soloTrab || E.verInact || E.prov || E.zona ? filtrosHTML() : '');
+      z.innerHTML = (E.zona ? desiertoHTML(E.zona.r) : `<div class="vacio"><h2>Sin resultados</h2><p>Nada coincide con «${esc(E.q)}». ¿Lo conoces? Añádelo para el resto del equipo.</p><a class="btn-lleno" href="#/alta">Añadir proveedor</a></div>`) + (E.soloTrab || E.verInact || E.prov || E.zona ? filtrosHTML() : '');
       engancharFiltros(z);
       return;
     }

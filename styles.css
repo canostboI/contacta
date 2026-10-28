@@ -517,3 +517,21 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .zona-botones { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .zona-yo { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 22px; border: 1.5px solid #00879A; background: #fff; color: #00879A; font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; }
 .zona-quitar { color: #B4151B !important; }
+
+/* v1.12.3 — Sorpresa del desierto cuando no hay nadie en la zona */
+.desierto { text-align: center; padding: 8px 16px 20px; }
+.desierto.compacto { padding: 0 0 4px; }
+.desierto-esc { width: 100%; max-width: 360px; height: auto; display: block; margin: 0 auto; overflow: hidden; }
+.desierto.compacto .desierto-esc { max-width: 260px; }
+.desierto-txt { margin: 6px auto 12px !important; max-width: 340px; font-size: 16px; font-weight: 600; color: #575049; }
+.desierto.compacto .desierto-txt { font-size: 14px; margin: 2px auto 8px !important; }
+.desierto-btns { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; }
+.d-bola { animation: d-rodar 5.5s linear infinite; }
+.d-giro { animation: d-girar .9s linear infinite; transform-box: fill-box; transform-origin: center; }
+.d-sol { animation: d-latido 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.d-cactus { animation: d-balanceo 4s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes d-rodar { 0% { transform: translate(-30px, 80px); } 20% { transform: translate(40px, 72px); } 30% { transform: translate(80px, 80px); } 50% { transform: translate(160px, 66px); } 60% { transform: translate(200px, 80px); } 80% { transform: translate(280px, 74px); } 100% { transform: translate(350px, 80px); } }
+@keyframes d-girar { to { transform: rotate(360deg); } }
+@keyframes d-latido { 50% { transform: scale(1.12); } }
+@keyframes d-balanceo { 50% { transform: rotate(-3deg); } }
+@media (prefers-reduced-motion: reduce) { .d-bola, .d-giro, .d-sol, .d-cactus { animation: none; } .d-bola { transform: translate(200px, 80px); } }

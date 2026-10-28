@@ -459,3 +459,11 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
   .columna .fila-val { margin-top: 2px; }
   .columna .btn-valorar { min-height: 30px; }
 }
+
+/* v1.9.8 — Botón pequeño de copiar junto al nombre, persona, teléfonos y correos */
+.fd-link { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: inherit; text-decoration: none; }
+.cp { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin-left: 2px; padding: 0; border: 0; border-radius: 7px; background: transparent; cursor: pointer; vertical-align: middle; transition: background .15s; }
+.cp:hover { background: var(--acento-suave, #E3F8FA); }
+.cp:hover svg { stroke: var(--acento, #00879A); }
+.cp.hecho { background: #E6F2E8; }
+.fila-nombre .cp { margin-left: 4px; position: relative; top: -1px; }

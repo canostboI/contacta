@@ -48,6 +48,7 @@
     chev: '<path d="M9 6l6 6-6 6"/>',
     tel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/>',
     copiar: '<path d="M9 9h11v11H9zM5 15V5a2 2 0 012-2h10"/>',
+    copiar2: '<rect x="9" y="9" width="12" height="12" rx="3"/><path d="M15 9V6a3 3 0 00-3-3H6a3 3 0 00-3 3v6a3 3 0 003 3h3"/>',
     ok: '<path d="M5 12l5 5 9-10"/>',
     wa: '<path d="M4 20l1.3-3.9A8 8 0 1112 20a8 8 0 01-4.1-1.1z"/>',
     correo: '<path d="M3 5h18v14H3zM3 6l9 7 9-7"/>',
@@ -728,7 +729,7 @@
       <div class="fila-enlace" data-abrir="${p.id}" role="link" tabindex="0" title="Ver ficha">
         <span class="avatar" style="background:${bg};color:${fg}">${esc(iniciales(p.nombre))}</span>
         <span class="fila-txt">
-          <span class="fila-nombre">${esc(p.nombre)}</span>
+          <span class="fila-nombre">${esc(p.nombre)}${btnCp(p.nombre, 'el nombre')}</span>
           ${oficios ? `<span class="fila-oficio">${esc(oficios)}</span>` : ''}
           ${datosFila(p)}
           <span class="fila-meta">
@@ -746,11 +747,15 @@
       <a class="btn-circ rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'} aria-label="Llamar a ${esc(p.nombre)}">${ico('tel', 19, '#fff')}</a>
     </div>`;
   }
+  // Botón pequeño para copiar un dato suelto (nombre, persona, teléfono, correo).
+  function btnCp(valor, que) {
+    return `<button class="cp" data-cp="${esc(valor)}" title="Copiar ${que}" aria-label="Copiar ${que}: ${esc(valor)}">${ico('copiar2', 15, '#8A817A', 2)}</button>`;
+  }
   function datosFila(p) {
     const d = [];
-    if (p.personas) d.push(`<span class="fd">${ico('contacto', 14, '#8A817A', 2)}<span>${esc(p.personas)}</span></span>`);
-    [...partes(p.moviles), ...partes(p.fijos)].forEach((x) => d.push(`<a class="fd fd-link" href="tel:${esc(telLink(x))}">${ico('tel', 14, '#8A817A', 2)}<span>${esc(telBonito(x))}</span></a>`));
-    partes(p.emails).forEach((m) => d.push(`<a class="fd fd-link" href="mailto:${esc(m)}">${ico('correo', 14, '#8A817A', 2)}<span>${esc(m)}</span></a>`));
+    if (p.personas) d.push(`<span class="fd">${ico('contacto', 14, '#8A817A', 2)}<span>${esc(p.personas)}</span>${btnCp(p.personas, 'la persona de contacto')}</span>`);
+    [...partes(p.moviles), ...partes(p.fijos)].forEach((x) => d.push(`<span class="fd"><a class="fd-link" href="tel:${esc(telLink(x))}">${ico('tel', 14, '#8A817A', 2)}<span>${esc(telBonito(x))}</span></a>${btnCp(telBonito(x), 'el teléfono')}</span>`));
+    partes(p.emails).forEach((m) => d.push(`<span class="fd"><a class="fd-link" href="mailto:${esc(m)}">${ico('correo', 14, '#8A817A', 2)}<span>${esc(m)}</span></a>${btnCp(m, 'el correo')}</span>`));
     if (p.web) d.push(`<a class="fd fd-link" href="${esc(/^https?:/i.test(p.web) ? p.web : 'https://' + p.web)}" target="_blank" rel="noopener">${ico('web', 14, '#8A817A', 2)}<span>${esc(p.web.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, ''))}</span></a>`);
     return d.length ? `<span class="fila-datos">${d.join('')}</span>` : '';
   }
@@ -775,6 +780,15 @@
       const p = IDX.porId.get(Number(b.dataset.valorar)); if (!p) return;
       if (!enLinea()) return aviso('Sin conexión: para valorar hace falta conexión', false);
       hojaValorar(p, p._vals.find((v) => sesion && v.usuario_id === sesion.user.id));
+    });
+    z.querySelectorAll('[data-cp]').forEach((b) => b.onclick = async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const v = b.dataset.cp;
+      if (await copiarTexto(v)) {
+        b.classList.add('hecho'); b.innerHTML = ico('ok', 15, '#2F6B3C', 2.6);
+        setTimeout(() => { b.classList.remove('hecho'); b.innerHTML = ico('copiar2', 15, '#8A817A', 2); }, 1400);
+        aviso('Copiado: ' + v);
+      } else aviso('No se ha podido copiar', false);
     });
     z.querySelectorAll('[data-copiar]').forEach((b) => b.onclick = async () => {
       const p = IDX.porId.get(Number(b.dataset.copiar));

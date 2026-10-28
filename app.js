@@ -800,6 +800,53 @@
     });
   }
 
+  // v1.12.5 — Ver en el mapa los proveedores de un oficio: un punto por población con el número de proveedores
+  function hojaMapaProv(lista, titulo) {
+    const porMuni = new Map(); let sin = 0;
+    lista.forEach((p) => {
+      if (p._lat == null) { sin++; return; }
+      const k = p._lat + ',' + p._lon;
+      if (!porMuni.has(k)) porMuni.set(k, { lat: p._lat, lon: p._lon, nombre: p._muni || p.poblacion, items: [] });
+      porMuni.get(k).items.push(p);
+    });
+    const puntos = [...porMuni.values()];
+    abrirHoja(`<div class="hoja-barra"><span></span><div class="hoja-titulo">${esc(titulo)}</div><button class="btn-texto fuerte" data-c>Cerrar</button></div>
+      <p class="zona-ayuda">${lista.length - sin} en el mapa${sin ? ` · ${sin} sin población` : ''}. Toca un punto para ver quién hay.</p>
+      <div class="zona-mapa" id="mp-mapa"><div class="zona-cargando">Cargando mapa…</div></div>
+      <div class="mp-lista" id="mp-lista"></div>`, (h) => {
+      h.classList.add('hoja-zona');
+      h.querySelector('[data-c]').onclick = cerrarHoja;
+      const listaEl = h.querySelector('#mp-lista');
+      const mostrar = (pt) => {
+        listaEl.innerHTML = `<div class="mp-pob">${esc(pt.nombre)} · ${pt.items.length}</div>` + pt.items.sort(ordenProv).map((p) =>
+          `<a class="mp-fila" href="#/p/${p.id}"><span>${esc(p.nombre)}</span>${p._n ? `<span class="mp-nota">${estrella('#E8A317', 12)} ${p._media.toFixed(1)}</span>` : ''}</a>`).join('');
+        listaEl.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => cerrarHoja()));
+      };
+      cargarLeaflet().then(() => {
+        const div = h.querySelector('#mp-mapa'); if (!div || !div.isConnected) return;
+        div.innerHTML = '';
+        const mapa = L.map(div).setView([41.6, 1.7], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(mapa);
+        if (E.zona) L.circle([E.zona.lat, E.zona.lon], { radius: E.zona.r * 1000, color: '#00879A', weight: 1.5, fillOpacity: 0.06, interactive: false }).addTo(mapa);
+        const capaPts = puntos.map((pt) => {
+          const n = pt.items.length, d = n > 99 ? 34 : n > 9 ? 30 : 26;
+          const m = L.marker([pt.lat, pt.lon], { title: pt.nombre, icon: L.divIcon({ className: 'mp-punto', html: `<span>${n}</span>`, iconSize: [d, d] }) }).addTo(mapa);
+          m.on('click', () => mostrar(pt));
+          return m;
+        });
+        setTimeout(() => {
+          mapa.invalidateSize();
+          if (capaPts.length) mapa.fitBounds(L.featureGroup(capaPts).getBounds(), { padding: [30, 30], maxZoom: 12 });
+        }, 60);
+        if (puntos.length === 1) mostrar(puntos[0]);
+        else listaEl.innerHTML = '<div class="mp-pista">El número de cada punto es cuántos proveedores hay en esa población.</div>';
+      }).catch(() => {
+        const div = h.querySelector('#mp-mapa');
+        if (div) div.innerHTML = '<div class="zona-cargando">No se ha podido cargar el mapa. Hace falta conexión.</div>';
+      });
+    });
+  }
+
   // Provincias que hay en la base (sin distinguir mayúsculas ni acentos), de más a menos proveedores
   function provincias() {
     const m = new Map();
@@ -927,7 +974,8 @@
   function gruposHTML(grupos) {
     return grupos.map((g, gi) => `
       <div class="seccion-cab"><h2>${esc(g.titulo)}</h2><span>${g.items.length}</span>
-        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#00879A')}<span>Copiar todos</span></button></div>
+        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#00879A')}<span>Copiar todos</span></button>
+        <button class="ver-mapa" data-gm="${gi}" title="Ver en el mapa">${ico('pin', 16, '#00879A', 1.8)}<span>Mapa</span></button></div>
       <div class="tarjeta">${g.items.map((p) => filaHTML(p, g.fam)).join('')}</div>`).join('');
   }
   function engancharGrupos(z, grupos) {
@@ -935,6 +983,7 @@
       const g = grupos[Number(b.dataset.g)];
       if (await copiarProveedores(g.items)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#00879A') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.items.length} proveedores copiados. Pégalos en el comparativo.`); }
     });
+    z.querySelectorAll('.ver-mapa').forEach((b) => b.onclick = () => { const g = grupos[Number(b.dataset.gm)]; hojaMapaProv(g.items, g.titulo); });
     engancharFilas(z);
   }
 

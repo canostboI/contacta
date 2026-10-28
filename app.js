@@ -339,6 +339,12 @@
     });
     setInterval(() => { if (document.visibilityState === 'visible') apuntar(); }, 5 * 60 * 1000);
   }
+  // Al tocar el logo de Contacta se repite la animación de arranque (se salta con un toque)
+  function repetirPortada() {
+    const el = document.getElementById('portada');
+    if (el && !el.hidden) return;
+    mostrarPortada(() => { try { localStorage.setItem(CLAVE_VISTA, String(Date.now())); } catch (_) {} });
+  }
   function mostrarPortada(apuntar) {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const el = document.getElementById('portada');
@@ -500,7 +506,7 @@
   }
   function pantallaSimple(fn) {
     $app.innerHTML = `<div class="barra-inicio"><a class="a-inicio" href="#/" title="Ir al inicio"><span class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:11px"><img src="${IMG.recop}" alt="RECOP" style="height:16px"><img src="${IMG.munne}" alt="Munné" style="height:13px"></span><img class="marca" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></a></div><div class="pantalla" id="ps"></div>`;
-    $app.querySelector('.a-inicio').onclick = (e) => { e.preventDefault(); irInicio(); };
+    $app.querySelector('.a-inicio').onclick = (e) => { e.preventDefault(); irInicio(); if (e.target.closest('.marca')) repetirPortada(); };
     fn(document.getElementById('ps')); window.scrollTo(0, 0);
   }
   // Vuelve al inicio de todo: sin búsqueda ni categoría, rueda arriba
@@ -554,7 +560,7 @@
     inp.oninput = alEscribir;
     inp.onkeydown = (e) => { if (e.key === 'Escape') { inp.value = ''; alEscribir(); } };
     xb.onclick = () => { inp.value = ''; E.q = ''; xb.hidden = true; pintarResultados(); inp.focus(); };
-    el.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => { e.preventDefault(); irInicio(); });
+    el.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => { e.preventDefault(); irInicio(); if (a.querySelector('.logo-cab')) repetirPortada(); });
     pintarResultados();
     if (ancho() && !E.fam) setTimeout(() => inp.focus({ preventScroll: true }), 50);
   }

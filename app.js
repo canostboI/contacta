@@ -371,7 +371,7 @@
     return out;
   }
   const barajar = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  function miniPortada() {
+  function miniPortada(ruedaAntes) {
     if (miniEnCurso) return;
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const logo = document.querySelector('.logo-cab');
@@ -395,12 +395,52 @@
       const fyR = Math.min(0.9, (window.innerHeight * 0.4) / Rg); // aplanado vertical según el alto de la pantalla
       const sentido = Math.random() < 0.5 ? 1 : -1;
       const DUR = 4200;
+      // Si la rueda de familias está a la vista, los puntos la rodean («la arropan») mientras gira
+      // hasta «Todas las familias», para que se vea que se reinicia; después vuelven al logo.
+      const ruedaEl = document.querySelector('#rueda');
+      const W = ruedaEl && ruedaEl.getBoundingClientRect();
+      const conRueda = !!(W && W.width && W.top < window.innerHeight - 40 && W.bottom > 40);
+      const wx = conRueda ? W.left + W.width / 2 : 0, wy = conRueda ? W.top + W.height / 2 : 0;
+      const rx = conRueda ? W.width / 2 + 10 : 0, ry = conRueda ? W.height / 2 + 12 : 0;
+      if (conRueda) {
+        const lista = ruedaEl.querySelector('.rueda-lista');
+        const n = Math.round(ruedaEl.querySelectorAll('.rueda-item').length / 3);
+        const Hi = 46;
+        if (lista && n && ruedaAntes > 0) {
+          lista.scrollTop = (n + ruedaAntes) * Hi; // la rueda empieza donde estaba…
+          setTimeout(() => lista.scrollTo({ top: n * Hi, behavior: 'smooth' }), DUR * 0.4); // …y gira a «Todas»
+        }
+        ruedaEl.classList.add('mini-arropada');
+        setTimeout(() => ruedaEl.classList.remove('mini-arropada'), DUR * 0.7);
+      }
       for (let i = 0; i < N; i++) {
         const o = origen[i % origen.length]; const d = destinos[i];
         const el = document.createElement('i'); el.className = 'mini-part';
         Object.assign(el.style, { left: o[0] + 'px', top: o[1] + 'px', background: o[2] });
         if (i % 7 === 0) { el.style.width = el.style.height = '4px'; }
         capa.appendChild(el);
+        if (conRueda) {
+          // Trayectoria: despegue → órbita pegada al borde de la rueda → vuelta a su sitio en el logo
+          const k = 0.98 + Math.random() * 0.22;
+          const enOrbita = (a) => [wx + rx * k * Math.cos(a), wy + ry * k * Math.sin(a)];
+          const a0 = (i / N) * 2 * Math.PI + Math.random() * 0.3; // repartidos por todo el contorno de la rueda
+          const vueltas = 0.5 + Math.random() * 0.15;
+          const a1 = a0 + sentido * vueltas * 2 * Math.PI;
+          const [px0, py0] = enOrbita(a0), [px1, py1] = enOrbita(a1);
+          const pasos = 20, kf = [];
+          for (let s = 0; s <= pasos; s++) {
+            const u = s / pasos;
+            let x, y, col = o[2], esc = 1;
+            if (u <= 0.2) { const v = u / 0.2, ev = v * v * (3 - 2 * v); x = o[0] + (px0 - o[0]) * ev; y = o[1] + (py0 - o[1]) * ev - Math.sin(v * Math.PI) * 30; }
+            else if (u <= 0.62) { const v = (u - 0.2) / 0.42; [x, y] = enOrbita(a0 + (a1 - a0) * v); col = v > 0.55 ? d[2] : o[2]; esc = 1 + Math.sin(v * Math.PI) * 0.4; }
+            else { const v = (u - 0.62) / 0.38, ev = 1 - Math.pow(1 - v, 2.4); x = px1 + (d[0] - px1) * ev; y = py1 + (d[1] - py1) * ev - Math.sin(v * Math.PI) * 25; col = d[2]; }
+            kf.push({ offset: u, transform: `translate(${(x - o[0]).toFixed(1)}px,${(y - o[1]).toFixed(1)}px) scale(${esc.toFixed(2)})`, background: col, opacity: 1 });
+          }
+          kf.push({ offset: 1, transform: kf[pasos].transform, background: d[2], opacity: 0 });
+          kf[pasos].offset = 0.96;
+          el.animate(kf, { duration: DUR, delay: Math.random() * 220, easing: 'linear', fill: 'both' });
+          continue;
+        }
         // Trayectoria: despegue → espiral alrededor del centro del logo → cierre sobre su sitio
         const a0 = Math.atan2(o[1] - cy, o[0] - cx), r0 = Math.hypot(o[0] - cx, o[1] - cy);
         const aD = Math.atan2(d[1] - cy, d[0] - cx), rD = Math.hypot(d[0] - cx, d[1] - cy);
@@ -431,7 +471,7 @@
       setTimeout(acabar, DUR + 800);
     } catch (e) { console.warn(e); acabar(); }
   }
-  const lanzarMini = () => setTimeout(miniPortada, 60);
+  const lanzarMini = (antes) => setTimeout(() => miniPortada(antes || 0), 60);
   function mostrarPortada(apuntar) {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const el = document.getElementById('portada');
@@ -593,7 +633,7 @@
   }
   function pantallaSimple(fn) {
     $app.innerHTML = `<div class="barra-inicio"><a class="a-inicio" href="#/" title="Ir al inicio"><span class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:11px"><img src="${IMG.recop}" alt="RECOP" style="height:16px"><img src="${IMG.munne}" alt="Munné" style="height:13px"></span><img class="marca" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></a></div><div class="pantalla" id="ps"></div>`;
-    $app.querySelector('.a-inicio').onclick = (e) => { e.preventDefault(); irInicio(); if (e.target.closest('.marca')) lanzarMini(); };
+    $app.querySelector('.a-inicio').onclick = (e) => { e.preventDefault(); const antes = E.rueda; irInicio(); if (e.target.closest('.marca')) lanzarMini(antes); };
     fn(document.getElementById('ps')); window.scrollTo(0, 0);
   }
   // Vuelve al inicio de todo: sin búsqueda ni categoría, rueda arriba
@@ -647,7 +687,7 @@
     inp.oninput = alEscribir;
     inp.onkeydown = (e) => { if (e.key === 'Escape') { inp.value = ''; alEscribir(); } };
     xb.onclick = () => { inp.value = ''; E.q = ''; xb.hidden = true; pintarResultados(); inp.focus(); };
-    el.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => { e.preventDefault(); irInicio(); if (a.querySelector('.logo-cab')) lanzarMini(); });
+    el.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => { e.preventDefault(); const antes = E.rueda; irInicio(); if (a.querySelector('.logo-cab')) lanzarMini(antes); });
     pintarResultados();
     if (ancho() && !E.fam) setTimeout(() => inp.focus({ preventScroll: true }), 50);
   }

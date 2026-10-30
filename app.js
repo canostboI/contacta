@@ -406,9 +406,23 @@
         const lista = ruedaEl.querySelector('.rueda-lista');
         const n = Math.round(ruedaEl.querySelectorAll('.rueda-item').length / 3);
         const Hi = 46;
-        if (lista && n && ruedaAntes > 0) {
-          lista.scrollTop = (n + ruedaAntes) * Hi; // la rueda empieza donde estaba…
-          setTimeout(() => lista.scrollTo({ top: n * Hi, behavior: 'smooth' }), DUR * 0.4); // …y gira a «Todas»
+        if (lista && n) {
+          // La ruleta empieza donde estaba (en la 3.ª copia de la lista), da una vuelta entera
+          // frenando como una tragaperras y se para en «Todas las familias» (1.ª opción de la copia central).
+          const desde = (2 * n + (ruedaAntes || 0)) * Hi, hasta = n * Hi;
+          lista.style.scrollSnapType = 'none';
+          lista.scrollTop = desde;
+          setTimeout(() => {
+            const t0 = performance.now(), dur = DUR * 0.42;
+            const paso = (ahora) => {
+              const v = Math.min(1, (ahora - t0) / dur);
+              const ev = 1 - Math.pow(1 - v, 3); // frena al final
+              lista.scrollTop = desde + (hasta - desde) * ev;
+              if (v < 1) requestAnimationFrame(paso);
+              else { lista.scrollTop = hasta; lista.style.scrollSnapType = ''; lista.dispatchEvent(new Event('scroll')); }
+            };
+            requestAnimationFrame(paso);
+          }, DUR * 0.22);
         }
         ruedaEl.classList.add('mini-arropada');
         setTimeout(() => ruedaEl.classList.remove('mini-arropada'), DUR * 0.7);

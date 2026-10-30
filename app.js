@@ -394,7 +394,7 @@
       const Rg = Math.max(Math.min(window.innerWidth, 1100) * 0.42, 140); // radio del remolino: se reparte por la página
       const fyR = Math.min(0.9, (window.innerHeight * 0.4) / Rg); // aplanado vertical según el alto de la pantalla
       const sentido = Math.random() < 0.5 ? 1 : -1;
-      const DUR = 4200;
+      const DUR = 3300;
       // Si la rueda de familias está a la vista, los puntos la rodean («la arropan») mientras gira
       // hasta «Todas las familias», para que se vea que se reinicia; después vuelven al logo.
       const ruedaEl = document.querySelector('#rueda');
@@ -424,7 +424,7 @@
           const k = 0.98 + Math.random() * 0.22;
           const enOrbita = (a) => [wx + rx * k * Math.cos(a), wy + ry * k * Math.sin(a)];
           const a0 = (i / N) * 2 * Math.PI + Math.random() * 0.3; // repartidos por todo el contorno de la rueda
-          const vueltas = 0.5 + Math.random() * 0.15;
+          const vueltas = 0.3 + Math.random() * 0.1;
           const a1 = a0 + sentido * vueltas * 2 * Math.PI;
           const [px0, py0] = enOrbita(a0), [px1, py1] = enOrbita(a1);
           const pasos = 20, kf = [];

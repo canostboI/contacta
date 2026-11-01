@@ -391,17 +391,12 @@
       origen = origen.concat(destinos.slice(0, 260));
       const N = Math.min(640, destinos.length);
       if (!N) { acabar(); return; }
-      const Rg = Math.max(Math.min(window.innerWidth, 1100) * 0.42, 140); // radio del remolino: se reparte por la página
-      const fyR = Math.min(0.9, (window.innerHeight * 0.4) / Rg); // aplanado vertical según el alto de la pantalla
-      const sentido = Math.random() < 0.5 ? 1 : -1;
-      const DUR = 3300;
-      // Si la rueda de familias está a la vista, los puntos la rodean («la arropan») mientras gira
-      // hasta «Todas las familias», para que se vea que se reinicia; después vuelven al logo.
+      const DUR = 1900;
+      // Si la rueda de familias está a la vista, gira como una tragaperras hasta «Todas las familias»
+      // mientras los puntos explotan y se recogen en el logo.
       const ruedaEl = document.querySelector('#rueda');
       const W = ruedaEl && ruedaEl.getBoundingClientRect();
       const conRueda = !!(W && W.width && W.top < window.innerHeight - 40 && W.bottom > 40);
-      const wx = conRueda ? W.left + W.width / 2 : 0, wy = conRueda ? W.top + W.height / 2 : 0;
-      const rx = conRueda ? W.width / 2 + 10 : 0, ry = conRueda ? W.height / 2 + 12 : 0;
       if (conRueda) {
         const lista = ruedaEl.querySelector('.rueda-lista');
         const n = Math.round(ruedaEl.querySelectorAll('.rueda-item').length / 3);
@@ -413,7 +408,7 @@
           lista.style.scrollSnapType = 'none';
           lista.scrollTop = desde;
           setTimeout(() => {
-            const t0 = performance.now(), dur = DUR * 0.42;
+            const t0 = performance.now(), dur = 1300;
             const paso = (ahora) => {
               const v = Math.min(1, (ahora - t0) / dur);
               const ev = 1 - Math.pow(1 - v, 3); // frena al final
@@ -422,10 +417,8 @@
               else { lista.scrollTop = hasta; lista.style.scrollSnapType = ''; lista.dispatchEvent(new Event('scroll')); }
             };
             requestAnimationFrame(paso);
-          }, DUR * 0.22);
+          }, 120);
         }
-        ruedaEl.classList.add('mini-arropada');
-        setTimeout(() => ruedaEl.classList.remove('mini-arropada'), DUR * 0.7);
       }
       for (let i = 0; i < N; i++) {
         const o = origen[i % origen.length]; const d = destinos[i];
@@ -433,49 +426,23 @@
         Object.assign(el.style, { left: o[0] + 'px', top: o[1] + 'px', background: o[2] });
         if (i % 7 === 0) { el.style.width = el.style.height = '4px'; }
         capa.appendChild(el);
-        if (conRueda) {
-          // Trayectoria: despegue → órbita pegada al borde de la rueda → vuelta a su sitio en el logo
-          const k = 0.98 + Math.random() * 0.22;
-          const enOrbita = (a) => [wx + rx * k * Math.cos(a), wy + ry * k * Math.sin(a)];
-          const a0 = (i / N) * 2 * Math.PI + Math.random() * 0.3; // repartidos por todo el contorno de la rueda
-          const vueltas = 0.3 + Math.random() * 0.1;
-          const a1 = a0 + sentido * vueltas * 2 * Math.PI;
-          const [px0, py0] = enOrbita(a0), [px1, py1] = enOrbita(a1);
-          const pasos = 20, kf = [];
-          for (let s = 0; s <= pasos; s++) {
-            const u = s / pasos;
-            let x, y, col = o[2], esc = 1;
-            if (u <= 0.2) { const v = u / 0.2, ev = v * v * (3 - 2 * v); x = o[0] + (px0 - o[0]) * ev; y = o[1] + (py0 - o[1]) * ev - Math.sin(v * Math.PI) * 30; }
-            else if (u <= 0.62) { const v = (u - 0.2) / 0.42; [x, y] = enOrbita(a0 + (a1 - a0) * v); col = v > 0.55 ? d[2] : o[2]; esc = 1 + Math.sin(v * Math.PI) * 0.4; }
-            else { const v = (u - 0.62) / 0.38, ev = 1 - Math.pow(1 - v, 2.4); x = px1 + (d[0] - px1) * ev; y = py1 + (d[1] - py1) * ev - Math.sin(v * Math.PI) * 25; col = d[2]; }
-            kf.push({ offset: u, transform: `translate(${(x - o[0]).toFixed(1)}px,${(y - o[1]).toFixed(1)}px) scale(${esc.toFixed(2)})`, background: col, opacity: 1 });
-          }
-          kf.push({ offset: 1, transform: kf[pasos].transform, background: d[2], opacity: 0 });
-          kf[pasos].offset = 0.96;
-          el.animate(kf, { duration: DUR, delay: Math.random() * 220, easing: 'linear', fill: 'both' });
-          continue;
-        }
-        // Trayectoria: despegue → espiral alrededor del centro del logo → cierre sobre su sitio
-        const a0 = Math.atan2(o[1] - cy, o[0] - cx), r0 = Math.hypot(o[0] - cx, o[1] - cy);
-        const aD = Math.atan2(d[1] - cy, d[0] - cx), rD = Math.hypot(d[0] - cx, d[1] - cy);
-        const rR = Rg * (0.3 + Math.random() * 0.9);
-        const vueltas = 0.7 + Math.random() * 0.5;
-        const aIni = a0 + sentido * vueltas * 2 * Math.PI;
-        const resto = (((sentido * (aD - aIni)) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-        const aFin = aIni + sentido * resto; // cierra sin dar otra vuelta entera
-        const pasos = 16, kf = [];
+        // Trayectoria: explosión hacia fuera desde el logo → breve flotación → se recogen en su sitio
+        const ang = Math.atan2(o[1] - cy, o[0] - cx) + (Math.random() - 0.5) * 1.2;
+        const dist = 50 + Math.pow(Math.random(), 0.7) * Math.min(260, window.innerWidth * 0.3);
+        const ex = o[0] + Math.cos(ang) * dist, ey = o[1] + Math.sin(ang) * dist * 0.7;
+        const deriva = (Math.random() - 0.5) * 16;
+        const pasos = 14, kf = [];
         for (let s = 0; s <= pasos; s++) {
           const u = s / pasos;
-          let a, r, col = o[2], esc = 1, fy = fyR;
-          if (u <= 0.15) { const v = u / 0.15; fy = 1 + (fyR - 1) * v; a = a0 + sentido * v * 0.6; r = r0 + (rR - r0) * v * 0.6 + Math.sin(v * Math.PI) * 18; }
-          else if (u <= 0.6) { const v = (u - 0.15) / 0.45; a = a0 + sentido * (0.6 + v * (vueltas * 2 * Math.PI - 0.6)); r = r0 + (rR - r0) * (0.6 + 0.4 * Math.min(1, v * 2)); col = v > 0.5 ? d[2] : o[2]; esc = 1 + Math.sin(v * Math.PI) * 0.5; }
-          else { const v = (u - 0.6) / 0.4; const ease = 1 - Math.pow(1 - v, 2.2); a = aIni + (aFin - aIni) * ease; r = rR + (rD - rR) * ease; fy = fyR + (1 - fyR) * ease; col = d[2]; }
-          const x = cx + r * Math.cos(a) - o[0], y = cy + r * Math.sin(a) * fy - o[1];
-          kf.push({ offset: u, transform: `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${esc.toFixed(2)})`, background: col, opacity: 1 });
+          let x, y, col = o[2], esc = 1;
+          if (u <= 0.38) { const v = u / 0.38, ev = 1 - Math.pow(1 - v, 3); x = o[0] + (ex - o[0]) * ev; y = o[1] + (ey - o[1]) * ev; esc = 1 + v * 0.4; }
+          else if (u <= 0.48) { const v = (u - 0.38) / 0.1; x = ex + deriva * v; y = ey + 4 * v; esc = 1.4; col = v > 0.5 ? d[2] : o[2]; }
+          else { const v = (u - 0.48) / 0.52, ev = v < 0.5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2; x = ex + deriva + (d[0] - ex - deriva) * ev; y = ey + 4 + (d[1] - ey - 4) * ev; esc = 1.4 - 0.4 * ev; col = d[2]; }
+          kf.push({ offset: u, transform: `translate(${(x - o[0]).toFixed(1)}px,${(y - o[1]).toFixed(1)}px) scale(${esc.toFixed(2)})`, background: col, opacity: 1 });
         }
         kf.push({ offset: 1, transform: kf[pasos].transform, background: d[2], opacity: 0 });
-        kf[pasos].offset = 0.94;
-        el.animate(kf, { duration: DUR, delay: Math.random() * 220, easing: 'linear', fill: 'both' });
+        kf[pasos].offset = 0.96;
+        el.animate(kf, { duration: DUR, delay: Math.random() * 120, easing: 'linear', fill: 'both' });
       }
       document.body.appendChild(capa);
       logo.classList.add('mini-fuera');

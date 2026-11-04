@@ -794,3 +794,4 @@ body.con-menu #menu { display: flex; flex-direction: column; position: fixed; to
 }
 /* Cabecera de la familia: tarjeta blanca sobre la foto */
 .cat-banda { background: rgba(255, 255, 255, .94) !important; border: 1px solid var(--linea); box-shadow: var(--sombra); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.cat.cat-foto[hidden] { display: none; }

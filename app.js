@@ -146,16 +146,11 @@
     btn.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + (conTexto ? '<span>Copiado</span>' : '');
     setTimeout(() => { btn.classList.remove('ok'); btn.innerHTML = antes; }, 1500);
   }
-  // Columnas de la plantilla de comparativo: EMPRESA · PERSONA · E-MAIL · TELÈFON · POBLACIÓ
-  function filaComparativo(p) {
-    const telf = partes(p.moviles)[0] || partes(p.fijos)[0] || '';
-    return [p.nombre, p.personas || '', partes(p.emails)[0] || '', telf, p.poblacion || ''];
-  }
+  // Hoja del gremio de la Estrategia de compras: solo se escribe la EMPRESA (columna A);
+  // el resto lo rellenan las fórmulas desde INDUSTRIALS. Un nombre por línea, en el orden de la lista.
   function copiarProveedores(lista) {
-    const filas = lista.map(filaComparativo);
-    const txt = filas.map((f) => f.map((c) => String(c).replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
-    const html = '<table>' + filas.map((f) => '<tr>' + f.map((c) => `<td>${esc(c)}</td>`).join('') + '</tr>').join('') + '</table>';
-    return copiarTexto(txt, html);
+    const nombres = lista.map((p) => String(p.nombre || '').replace(/[\t\n]/g, ' ').trim());
+    return copiarTexto(nombres.join('\n'));
   }
 
   /* ---------------- Datos ---------------- */
@@ -1066,7 +1061,7 @@
   function engancharGrupos(z, grupos) {
     z.querySelectorAll('.copiar-todos').forEach((b) => b.onclick = async () => {
       const g = grupos[Number(b.dataset.g)];
-      if (await copiarProveedores(g.items)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#00879A') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.items.length} proveedores copiados. Pégalos en el comparativo.`); }
+      if (await copiarProveedores(g.items)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#00879A') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.items.length} proveedores copiados. Pégalos en la columna EMPRESA de la hoja del gremio.`); }
     });
     engancharFilas(z);
   }
@@ -1238,7 +1233,7 @@
       ${borrado ? '' : `<div style="margin:22px 20px 0"><button class="btn-blanco btn-peligro" id="a-eliminar">${ico('papelera', 18, '#B4151B', 1.8)}Eliminar proveedor</button></div>`}
       <div style="height:32px"></div>`;
     el.querySelectorAll('[data-copia]').forEach((b) => b.onclick = async () => { if (await copiarTexto(b.dataset.copia)) marcarCopiado(b, true); });
-    el.querySelector('#a-copiar').onclick = async (e) => { if (await copiarProveedores([p])) { marcarCopiado(e.currentTarget, true); aviso('Copiado. Pégalo en el comparativo.'); } };
+    el.querySelector('#a-copiar').onclick = async (e) => { if (await copiarProveedores([p])) { marcarCopiado(e.currentTarget, true); aviso('Copiado. Pégalo en la columna EMPRESA de la hoja del gremio.'); } };
     el.querySelector('#a-vcf').onclick = () => descargarVcf(p);
     el.querySelector('#a-compartir').onclick = () => compartir(p);
     const bv = el.querySelector('#a-valorar'); if (bv) bv.onclick = () => hojaValorar(p, mia);

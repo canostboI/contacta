@@ -702,3 +702,95 @@ body.con-menu #menu { display: flex; flex-direction: column; position: fixed; to
   .cat-foto .cat-nombre { font-size: 14.5px; }
   .cat-foto .cat-n { font-size: 12.5px; }
 }
+
+/* =====================================================================
+   v1.15.0 — Rediseño, pasos 3-5: rueda, listado de proveedores y ficha
+   ===================================================================== */
+/* Rueda de familias: tarjeta blanca, la familia elegida en azul */
+.columna .rueda, .rueda { background: var(--blanco); border: 1px solid var(--linea); border-radius: 18px; box-shadow: var(--sombra); }
+.rueda-sel { background: var(--acento); border: 0; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 117, 141, .28); }
+.rueda-item { color: var(--placeholder); }
+.rueda-item.sel { color: #fff; font-weight: 700; }
+.rueda::before, .rueda::after { border-color: var(--placeholder); }
+
+/* Listado: filas como tarjetas separadas */
+.columna .tarjeta { background: transparent; border: 0; box-shadow: none; overflow: visible; display: flex; flex-direction: column; gap: 10px; }
+.columna .tarjeta > .fila { background: var(--blanco); border: 1px solid var(--linea); border-radius: 16px; box-shadow: var(--sombra); transition: box-shadow .15s, border-color .15s; }
+.columna .tarjeta > .fila:hover { background: var(--blanco); border-color: #C9DCE1; box-shadow: 0 6px 18px rgba(15, 27, 33, .08); }
+.columna .avatar { font-weight: 800; }
+.fila-meta .lugar { display: inline-flex; align-items: center; gap: 4px; }
+.fila-persona { font-size: 15px; color: var(--tinta); }
+.btn-txt { display: none; }
+.pastilla.sinv { color: #B4151B; border: 1px solid #F2C4C6; background: #FDF1F1; }
+.pastilla.trab { font-weight: 600; }
+
+/* Ordenador ancho: cada proveedor en una fila horizontal compacta */
+@media (min-width: 1180px) {
+  .columna .fila { display: flex; align-items: center; padding: 12px 14px 12px 16px; gap: 10px; }
+  .columna .fila-enlace { display: grid; grid-template-columns: 52px minmax(200px, 1.2fr) minmax(210px, 1.1fr) minmax(170px, .8fr); column-gap: 18px; row-gap: 2px; align-items: center; }
+  .columna .fila-txt { display: contents; }
+  .columna .fila .avatar { grid-column: 1; grid-row: 1 / span 4; align-self: center; }
+  .columna .fila-nombre { grid-column: 2; grid-row: 1; font-size: 17px; font-weight: 700; }
+  .columna .fila-oficio { grid-column: 2; grid-row: 2; font-size: 13px; color: var(--sec); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .columna .fila-persona { grid-column: 2; grid-row: 3; font-size: 14px; min-height: 24px; }
+  .columna .fila-meta { grid-column: 2; grid-row: 4; font-size: 13px; }
+  .columna .fila-datos { grid-column: 3; grid-row: 1 / span 4; flex-direction: column; flex-wrap: nowrap; gap: 0; margin: 0; padding-left: 18px; border-left: 1px solid var(--linea); align-self: stretch; justify-content: center; }
+  .columna .fila-datos .fd { font-size: 14px; min-height: 26px; }
+  .columna .fila-val { grid-column: 4; grid-row: 1 / span 4; flex-direction: column; align-items: flex-start; gap: 4px; margin: 0; padding-left: 18px; border-left: 1px solid var(--linea); align-self: stretch; justify-content: center; }
+  .columna .fila-val .btn-valorar { margin-left: 0; }
+  .columna .fila > .btn-circ, .columna .fila > a.btn-circ { margin-top: 0; }
+  .columna .fila > .btn-circ.rojo, .columna .fila > .btn-circ[data-copiar] { width: auto; padding: 0 16px; gap: 8px; border-radius: 23px; font-size: 14px; font-weight: 600; }
+  .columna .fila > .btn-circ[data-copiar] { background: var(--blanco); border: 1px solid var(--linea); color: var(--tinta); }
+  .columna .fila > .btn-circ.rojo .btn-txt, .columna .fila > .btn-circ[data-copiar] .btn-txt { display: inline; }
+  .columna .fila > a.btn-circ:not(.rojo) { background: #25D366; }
+  .columna .fila > a.btn-circ:not(.rojo) svg { stroke: #fff; }
+}
+@media (max-width: 699px) {
+  .columna .tarjeta { gap: 8px; }
+  .columna .fila-persona { grid-column: 1 / -1; font-size: 14px; min-height: 24px; cursor: pointer; }
+}
+
+/* Ficha del proveedor */
+.pantalla.pantalla-ficha { max-width: 1120px; }
+.fi-botones { display: inline-flex; gap: 8px; }
+.fi-botones .btn-texto { gap: 6px; font-weight: 600; font-size: 15px; border-radius: 22px; padding: 0 16px; }
+.fi-editar { color: var(--acento); border: 1.5px solid var(--acento); min-height: 40px; }
+.fi-eliminar { color: #B4151B; border: 1.5px solid #E7A3A6; min-height: 40px; }
+.fi-eliminar { display: none; }
+.ficha-color { position: relative; }
+.fi-nota { display: none; }
+.dato.con-ico { padding-left: 12px; gap: 12px; }
+.dato-ico { width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+.ico-contacto { background: #E7F1FA; color: #2C6AA0; }
+.ico-tel { background: #E8F5EA; color: #2F7A3E; }
+.ico-correo { background: #E5F3F6; color: var(--acento); }
+.ico-pin { background: #F1EAFB; color: #7A4FC1; }
+.fi-reparto { display: flex; align-items: center; gap: 20px; padding: 16px 18px; }
+.fi-media { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 110px; padding-right: 20px; border-right: 1px solid var(--linea); }
+.fi-media b, .fi-nota b { display: inline-flex; align-items: center; gap: 4px; font-size: 38px; font-weight: 800; letter-spacing: -1px; color: var(--tinta-fuerte); line-height: 1.05; }
+.fi-media span, .fi-nota span { font-size: 14px; color: var(--sec); }
+.fi-media small, .fi-nota small { font-size: 13px; color: var(--sec); }
+.fi-barras { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fi-barra { display: grid; grid-template-columns: 34px 1fr 42px; align-items: center; gap: 10px; font-size: 13px; color: var(--sec); }
+.fi-barra > span:first-child { display: inline-flex; align-items: center; gap: 3px; color: var(--tinta); font-weight: 600; }
+.fi-barra > span:last-child { text-align: right; }
+.fi-barra i { height: 8px; border-radius: 4px; background: var(--suave); overflow: hidden; }
+.fi-barra em { display: block; height: 100%; border-radius: 4px; background: var(--acento); }
+@media (min-width: 1100px) {
+  .fi-eliminar { display: inline-flex; }
+  #a-eliminar { display: none; }
+  .ficha-color { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "av nom nota" "av ofs nota" "av est nota"; justify-items: start; text-align: left; column-gap: 28px; row-gap: 8px; padding: 26px 32px; margin: 4px 20px 18px; }
+  .ficha-color .ficha-avatar { grid-area: av; width: 112px; height: 112px; border-radius: 56px; font-size: 40px; align-self: center; }
+  .ficha-color .nombre-grande { grid-area: nom; font-size: 34px; margin: 0; }
+  .ficha-color .ficha-oficios { grid-area: ofs; justify-content: flex-start; }
+  .ficha-color .subtitulo:not(.ficha-oficios) { grid-area: est; justify-content: flex-start; }
+  .fi-nota { grid-area: nota; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-left: 28px; border-left: 1px solid rgba(0, 0, 0, .08); align-self: stretch; }
+  .acciones { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .accion { flex-direction: row; min-height: 52px; font-size: 14px; gap: 8px; border-radius: 26px; }
+  .accion .acc-ico { width: 30px; height: 30px; }
+  .fi-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 4px; align-items: start; }
+  .fi-cols .tarjeta { margin-left: 20px; margin-right: 20px; }
+  .fi-der > div[style*="margin:10px 20px"] { margin-left: 20px !important; margin-right: 20px !important; }
+}
+/* Cabecera de la familia: tarjeta blanca sobre la foto */
+.cat-banda { background: rgba(255, 255, 255, .94) !important; border: 1px solid var(--linea); box-shadow: var(--sombra); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }

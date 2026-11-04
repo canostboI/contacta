@@ -64,7 +64,8 @@
     restaurar: '<path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v4h4"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>',
     pin: '<path d="M12 21s-7-6.2-7-12a7 7 0 0114 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
-    casa: '<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/>'
+    casa: '<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/>',
+    editar: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>'
   };
   const ico = (n, sz = 20, color = 'currentColor', w = 2) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
   const estrella = (fill, sz = 13) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="${fill}" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>`;
@@ -1030,7 +1031,7 @@
       z.querySelector('#of-tit').textContent = op.id ? op.nombre : 'Oficios';
       z.querySelector('#of-n').textContent = n;
     };
-    montarRueda(z.querySelector('#rueda'), opciones.map((x) => ({ label: x.nombre, icon: x.id ? icoFam(x.nombre, 20, '#26323A') : '' })), E.rueda, true,
+    montarRueda(z.querySelector('#rueda'), opciones.map((x) => ({ label: x.nombre, icon: x.id ? icoFam(x.nombre, 20, 'currentColor') : '' })), E.rueda, true,
       (i) => { E.rueda = i; filtrar(i); }, (i) => { E.rueda = i; filtrar(i); });
     filtrar(E.rueda);
     engancharFiltros(z);
@@ -1131,10 +1132,12 @@
         <span class="fila-txt">
           <span class="fila-nombre">${esc(p.nombre)}${btnCp(p.nombre, 'el nombre')}</span>
           ${oficios ? `<span class="fila-oficio">${esc(oficios)}</span>` : ''}
-          ${datosFila(p)}
+          ${p.personas ? `<span class="fila-persona fd">${ico('contacto', 14, '#8A949B', 2)}<span>${esc(p.personas)}</span>${btnCp(p.personas, 'la persona de contacto')}</span>` : ''}
+          ${datosFila(p, true)}
           <span class="fila-meta">
-            ${lugar ? `<span class="lugar">${esc(lugar)}</span>` : ''}
+            ${lugar ? `<span class="lugar">${ico('pin', 13, '#8A949B', 2)}${esc(lugar)}</span>` : ''}
             ${p.estado === 'inactivo' ? '<span class="pastilla inact">Cerrado</span>' : p._trab ? '<span class="pastilla trab">Trabajado con nosotros</span>' : ''}
+            ${p.sin_verificar ? '<span class="pastilla sinv">Sin verificar</span>' : ''}
           </span>
           <span class="fila-val">
             ${p._n ? `${estrellas(Math.round(p._media), 16)}<span class="val-num">${p._media.toFixed(1).replace('.', ',')}</span><span class="val-cuantas">(${p._n} valoraci${p._n === 1 ? 'ón' : 'ones'})</span>` : '<span class="val-cuantas">Sin valoraciones</span>'}
@@ -1142,18 +1145,18 @@
           </span>
         </span>
       </div>
-      <button class="btn-circ solo-ancho" data-copiar="${p.id}" aria-label="Copiar ${esc(p.nombre)}">${ico('copiar', 18, '#26323A')}</button>
+      <button class="btn-circ solo-ancho" data-copiar="${p.id}" aria-label="Copiar ${esc(p.nombre)}">${ico('copiar', 18, '#26323A')}<span class="btn-txt">Copiar</span></button>
       <a class="btn-circ" ${moviles[0] ? `href="https://wa.me/${telLink(moviles[0]).replace('+', '')}" target="_blank" rel="noopener"` : 'aria-disabled="true"'} aria-label="WhatsApp a ${esc(p.nombre)}">${ico('wa', 19, '#2F6B3C')}</a>
-      <a class="btn-circ rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'} aria-label="Llamar a ${esc(p.nombre)}">${ico('tel', 19, '#fff')}</a>
+      <a class="btn-circ rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'} aria-label="Llamar a ${esc(p.nombre)}">${ico('tel', 19, '#fff')}<span class="btn-txt">Llamar</span></a>
     </div>`;
   }
   // Botón pequeño para copiar un dato suelto (nombre, persona, teléfono, correo).
   function btnCp(valor, que) {
     return `<button class="cp" data-cp="${esc(valor)}" title="Copiar ${que}" aria-label="Copiar ${que}: ${esc(valor)}">${ico('copiar2', 15, '#8A817A', 2)}</button>`;
   }
-  function datosFila(p) {
+  function datosFila(p, sinPersona) {
     const d = [];
-    if (p.personas) d.push(`<span class="fd">${ico('contacto', 14, '#8A817A', 2)}<span>${esc(p.personas)}</span>${btnCp(p.personas, 'la persona de contacto')}</span>`);
+    if (p.personas && !sinPersona) d.push(`<span class="fd">${ico('contacto', 14, '#8A817A', 2)}<span>${esc(p.personas)}</span>${btnCp(p.personas, 'la persona de contacto')}</span>`);
     [...partes(p.moviles), ...partes(p.fijos)].forEach((x) => d.push(`<span class="fd"><a class="fd-link" href="tel:${esc(telLink(x))}">${ico('tel', 14, '#8A817A', 2)}<span>${esc(telBonito(x))}</span></a>${btnCp(telBonito(x), 'el teléfono')}</span>`));
     partes(p.emails).forEach((m) => d.push(`<span class="fd"><a class="fd-link" href="mailto:${esc(m)}">${ico('correo', 14, '#8A817A', 2)}<span>${esc(m)}</span></a>${btnCp(m, 'el correo')}</span>`));
     if (p.web) d.push(`<a class="fd fd-link" href="${esc(/^https?:/i.test(p.web) ? p.web : 'https://' + p.web)}" target="_blank" rel="noopener">${ico('web', 14, '#8A817A', 2)}<span>${esc(p.web.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, ''))}</span></a>`);
@@ -1246,18 +1249,23 @@
     const famN = p._fam; const moviles = partes(p.moviles); const fijos = partes(p.fijos); const emails = partes(p.emails);
     const telf = moviles[0] || fijos[0]; const mia = p._vals.find((v) => sesion && v.usuario_id === sesion.user.id);
     const datos = [];
-    if (p.personas) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Persona de contacto</span><span class="v">${esc(p.personas)}</span></div></div>`);
-    moviles.forEach((t) => datos.push(datoCopiable('Móvil', telBonito(t), `tel:${telLink(t)}`)));
-    fijos.forEach((t) => datos.push(datoCopiable('Teléfono fijo', telBonito(t), `tel:${telLink(t)}`)));
-    emails.forEach((m) => datos.push(datoCopiable('Correo', m, `mailto:${m}`)));
+    const conIco = (n, html) => html.replace('<div class="dato">', `<div class="dato con-ico"><span class="dato-ico ico-${n}">${ico(n, 18, 'currentColor', 1.9)}</span>`);
+    if (p.personas) datos.push(`<div class="dato con-ico"><span class="dato-ico ico-contacto">${ico('contacto', 18, 'currentColor', 1.9)}</span><div class="dato-txt"><span class="k">Persona de contacto</span><span class="v">${esc(p.personas)}</span></div></div>`);
+    moviles.forEach((t) => datos.push(conIco('tel', datoCopiable('Móvil', telBonito(t), `tel:${telLink(t)}`))));
+    fijos.forEach((t) => datos.push(conIco('tel', datoCopiable('Teléfono fijo', telBonito(t), `tel:${telLink(t)}`))));
+    emails.forEach((m) => datos.push(conIco('correo', datoCopiable('Correo', m, `mailto:${m}`))));
     if (p.web) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Web</span><a class="v" href="${esc(/^https?:/i.test(p.web) ? p.web : 'https://' + p.web)}" target="_blank" rel="noopener">${esc(p.web.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, ''))}</a></div>${ico('web', 18, '#A39A93', 1.8)}</div>`);
-    if (p.poblacion || p.provincia) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Población</span><span class="v">${esc([p.poblacion, p.provincia].filter(Boolean).join(' · '))}</span></div></div>`);
+    if (p.poblacion || p.provincia) datos.push(`<div class="dato con-ico"><span class="dato-ico ico-pin">${ico('pin', 18, 'currentColor', 1.9)}</span><div class="dato-txt"><span class="k">Población</span><span class="v">${esc([p.poblacion, p.provincia].filter(Boolean).join(' · '))}</span></div></div>`);
     if (p.cif) datos.push(datoCopiable('CIF', p.cif));
     if (p.recomendado_por) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Recomendado por</span><span class="v">${esc(p.recomendado_por)}</span></div></div>`);
     const borrado = !!p.eliminado_en;
+    el.classList.add('pantalla-ficha');
+    // Reparto de estrellas (5 → 1) calculado con las valoraciones reales
+    const reparto = [5, 4, 3, 2, 1].map((k) => { const c = p._vals.filter((v) => Math.round(v.estrellas) === k).length; return { k, c, pc: p._n ? Math.round(c * 100 / p._n) : 0 }; });
+    const media = p._n ? p._media.toFixed(1).replace('.', ',') : '';
     el.innerHTML = `
       <div class="barra-nav"><a class="btn-texto" href="${esc(ultimaLista)}">${ico('atras', 22, '#26323A', 2.2)}Volver</a><span></span>
-        ${borrado ? '' : `<a class="btn-texto" href="#/editar/${p.id}">Editar</a>`}</div>
+        ${borrado ? '' : `<span class="fi-botones"><a class="btn-texto fi-editar" href="#/editar/${p.id}">${ico('editar', 18, 'currentColor', 2)}Editar</a><button class="btn-texto fi-eliminar" id="a-eliminar2">${ico('papelera', 18, 'currentColor', 2)}Eliminar</button></span>`}</div>
       ${borrado ? `<div class="marca-sinv" style="border-style:solid;background:#FFF4D6;color:#6B5310">${ico('papelera', 18, '#6B5310', 1.8)}<span>Está en la papelera. <a href="#/papelera" style="text-decoration:underline">Ver papelera</a></span></div>` : ''}
       <div class="identidad ficha-color" style="background:${tono(famN)[0]}">
         <div class="ficha-avatar" style="color:${tono(famN)[1]}">${esc(iniciales(p.nombre))}<span class="ficha-fam" title="${esc(famN || '')}">${icoFam(famN, 16, tono(famN)[1])}</span></div>
@@ -1265,6 +1273,7 @@
         <div class="subtitulo ficha-oficios">${p._ofs.length ? p._ofs.map((o) => `<span class="ficha-of" style="color:${tono(famN)[1]}">${esc(o.nombre)}</span>`).join('') : '<span>Sin oficio</span>'}</div>
         <div class="subtitulo">${p.estado === 'inactivo' ? '<span class="pastilla inact">Empresa cerrada</span>' : p._trab ? '<span class="pastilla trab">Trabajado con nosotros</span>' : '<span class="pastilla ref">Referencia</span>'}
           ${p.sin_verificar ? '<span class="pastilla sinv" title="No se pudo confirmar que siga activa">Sin verificar</span>' : ''}</div>
+        ${p._n ? `<div class="fi-nota"><b>${media}${estrella('#F2A900', 26)}</b><span>Valoración media</span><small>(${p._n} valoraci${p._n === 1 ? 'ón' : 'ones'})</small></div>` : ''}
       </div>
       <div class="acciones">
         <a class="accion rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'}><span class="acc-ico">${ico('tel', 20, '#fff')}</span>Llamar</a>
@@ -1275,12 +1284,17 @@
         <button class="accion" id="a-compartir"><span class="acc-ico" style="background:#FDE6EA">${ico('compartir', 20, '#E0284F')}</span><span>Compartir</span></button>
       </div>
       ${p.sin_verificar ? `<div class="marca-sinv" style="margin-top:12px">${ico('info', 18, '#5F6B73', 1.8)}<span>No pudimos confirmar que siga activa. Si hablas con ellos, edita o valora la ficha y la marca desaparece.</span></div>` : ''}
+      <div class="fi-cols"><div class="fi-izq">
       ${datos.length ? `<div class="seccion"><span class="etiqueta-sec">Contacto</span></div><div class="tarjeta">${datos.join('')}</div>` : ''}
+      ${p.notas ? `<div class="seccion"><span class="etiqueta-sec">Observaciones</span></div><div class="tarjeta"><div class="texto-bloque">${esc(p.notas)}</div></div>` : ''}
+      </div><div class="fi-der">
       <div class="seccion"><span class="etiqueta-sec">Valoraciones</span>
         ${p._n ? `<span style="display:flex;align-items:center;gap:4px;font-size:15px;font-weight:600">${estrella('#E8A317', 14)}${p._media.toFixed(1).replace('.', ',')}<span style="font-weight:400;color:var(--sec)">· ${p._n}</span></span>` : ''}</div>
-      ${p._n ? `<div class="tarjeta">${p._vals.map((v) => valoracionHTML(v)).join('')}</div>` : `<div class="ayuda" style="padding-top:0">Nadie la ha valorado todavía.</div>`}
+      ${p._n ? `<div class="tarjeta fi-reparto"><div class="fi-media"><b>${media}${estrella('#F2A900', 22)}</b><span>Valoración media</span><small>(${p._n} valoraci${p._n === 1 ? 'ón' : 'ones'})</small></div>
+        <div class="fi-barras">${reparto.map((r) => `<div class="fi-barra"><span>${r.k} ${estrella('#F2A900', 12)}</span><i><em style="width:${r.pc}%"></em></i><span>${r.pc} %</span></div>`).join('')}</div></div>
+        <div class="tarjeta" style="margin-top:10px">${p._vals.map((v) => valoracionHTML(v)).join('')}</div>` : `<div class="ayuda" style="padding-top:0">Nadie la ha valorado todavía.</div>`}
       ${borrado ? '' : `<div style="margin:10px 20px 0"><button class="btn-blanco" id="a-valorar">${ico(mia ? 'ok' : 'mas', 18, '#26323A')}${mia ? 'Cambiar mi valoración' : 'Añadir valoración'}</button></div>`}
-      ${p.notas ? `<div class="seccion"><span class="etiqueta-sec">Notas</span></div><div class="tarjeta"><div class="texto-bloque">${esc(p.notas)}</div></div>` : ''}
+      </div></div>
       <div class="pie">Añadido por ${esc(nombreUsuario(p.creado_por, p.creado_por_texto))} · ${fecha(p.created_at)}${p.updated_at && p.updated_at !== p.created_at ? ` · Última edición ${hace(p.updated_at)}` : ''}</div>
       ${borrado ? '' : `<div style="margin:22px 20px 0"><button class="btn-blanco btn-peligro" id="a-eliminar">${ico('papelera', 18, '#B4151B', 1.8)}Eliminar proveedor</button></div>`}
       <div style="height:32px"></div>`;
@@ -1290,6 +1304,7 @@
     el.querySelector('#a-compartir').onclick = () => compartir(p);
     const bv = el.querySelector('#a-valorar'); if (bv) bv.onclick = () => hojaValorar(p, mia);
     const be = el.querySelector('#a-eliminar'); if (be) be.onclick = () => eliminar(p);
+    const be2 = el.querySelector('#a-eliminar2'); if (be2) be2.onclick = () => eliminar(p);
     el.querySelectorAll('.valoracion > button').forEach((b) => b.onclick = () => {
       const v = b.parentElement; const id = v.dataset.v;
       if (abiertas.has(id)) abiertas.delete(id); else abiertas.add(id);

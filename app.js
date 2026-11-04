@@ -688,7 +688,7 @@
   function pintarBuscador(el) {
     const offline = !enLinea();
     el.innerHTML = `
-      <header class="cabecera">
+      <header class="cabecera con-foto">
         <div class="dir-titulo">
           <h1 class="titulo">Directorio de proveedores</h1>
           <p class="dir-sub">Encuentra y gestiona proveedores del grupo.</p>
@@ -997,8 +997,14 @@
     return { porOf, porFam };
   }
 
+  // v1.14.0 — Fotos de los oficios: carpeta oficios/, una por ID real (1-135). Los oficios nuevos
+  // que se creen después no tienen foto y se quedan con el fondo del color de su familia.
+  const conFoto = (id) => Number.isInteger(id) && id >= 1 && id <= 135;
+  const fotoOficio = (id) => conFoto(id) ? `<img class="cat-img" src="oficios/${id}.webp" alt="" loading="lazy" decoding="async" width="480" height="360" onerror="this.remove()">` : '';
   function pintarResultados() {
     const z = document.getElementById('resultados'); if (!z) return;
+    const cab = document.querySelector('.cabecera');
+    if (cab) cab.style.setProperty('--foto', `url(oficios/${conFoto(E.of) ? E.of : 116}.webp)`);
     const base = listaFiltrada();
     const C = cuentas(base);
     if (E.q.trim()) return pintarBusqueda(z, base, C);
@@ -1014,9 +1020,9 @@
       <div class="seccion-cab"><h2 id="of-tit">Oficios</h2><span id="of-n"></span></div>
       ${!ofs.length && E.zona ? desiertoHTML(E.zona.r) : ''}
       <div class="rejilla">${ofs.map(({ o, f }) => {
-        const [bg, fg] = tono(f.nombre); const n = C.porOf.get(o.id) || 0;
-        return `<a class="cat cat-color" href="#/f/${f.id}/${o.id}" data-fam="${f.id}" title="${esc(f.nombre)}" style="background:${bg}"><span class="cat-ico" style="background:#fff">${icoFam(f.nombre, 24, fg)}</span>
-          <span class="cat-nombre">${esc(o.nombre)}</span><span class="cat-n" style="color:${fg}">${n} proveedor${n === 1 ? '' : 'es'}</span></a>`;
+        const fg = tono(f.nombre)[1]; const n = C.porOf.get(o.id) || 0;
+        return `<a class="cat cat-foto" href="#/f/${f.id}/${o.id}" data-fam="${f.id}" title="${esc(f.nombre)}" style="background:${fg}">${fotoOficio(o.id)}
+          <span class="cat-pie"><span class="cat-nombre">${esc(o.nombre)}</span><span class="cat-n">${n} proveedor${n === 1 ? '' : 'es'}</span></span></a>`;
       }).join('')}</div><div style="height:32px"></div>`;
     const filtrar = (i) => {
       const op = opciones[i]; let n = 0;

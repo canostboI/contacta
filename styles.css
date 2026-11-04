@@ -670,3 +670,35 @@ body.con-menu #menu { display: flex; flex-direction: column; position: fixed; to
 .con-menu .cabecera { padding-top: 18px; }
 .con-menu .barra-nav { padding-top: 6px; }
 @media (min-width: 700px) { .con-menu .cabecera { padding-top: 28px; } }
+
+/* =====================================================================
+   v1.14.0 — Rediseño, paso 2: tarjetas con foto de cada oficio y foto de cabecera
+   ===================================================================== */
+/* Foto de cabecera a la derecha, fundida con el fondo (en un oficio, su propia foto) */
+.cabecera.con-foto { position: relative; isolation: isolate; }
+.cabecera.con-foto::before { content: ''; position: absolute; z-index: -1; top: 0; right: 0; width: 60%; height: 300px; background: var(--foto) center / cover no-repeat; -webkit-mask-image: linear-gradient(to right, transparent, #000 45%, #000 80%, transparent), linear-gradient(to top, transparent, #000 50%); -webkit-mask-composite: source-in; mask-image: linear-gradient(to right, transparent, #000 45%, #000 80%, transparent), linear-gradient(to top, transparent, #000 50%); mask-composite: intersect; opacity: .7; pointer-events: none; }
+@media (max-width: 699px) { .cabecera.con-foto::before { width: 70%; height: 170px; opacity: .45; } }
+.dir-titulo { max-width: 620px; }
+
+/* Filtros: pastillas blancas con borde y sombra suave */
+.chip, .sel-chip { background: var(--blanco); border: 1px solid var(--linea); box-shadow: 0 1px 2px rgba(15, 27, 33, .05); min-height: 38px; border-radius: 999px; }
+.sel-chip select { min-height: 36px; }
+.chip.on, .sel-chip.on { border-color: var(--acento); }
+
+/* Tarjetas fotográficas de oficio */
+.rejilla { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+.cat.cat-foto { position: relative; display: block; padding: 0; min-height: 0; aspect-ratio: 4 / 3; border: 0; border-radius: 16px; overflow: hidden; box-shadow: var(--sombra); transition: transform .2s ease, box-shadow .2s ease; }
+.cat-foto .cat-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .45s ease; }
+.cat-foto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(5, 15, 20, .82) 0%, rgba(5, 15, 20, .45) 38%, rgba(5, 15, 20, 0) 65%); pointer-events: none; }
+.cat-foto .cat-pie { position: absolute; z-index: 1; left: 0; right: 0; bottom: 0; padding: 12px 14px 12px; display: flex; flex-direction: column; gap: 2px; color: #fff; }
+.cat-foto .cat-nombre { color: #fff; font-size: 16px; font-weight: 700; line-height: 1.2; letter-spacing: -.2px; text-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
+.cat-foto .cat-n { color: rgba(255, 255, 255, .9); font-size: 14px; font-weight: 500; margin: 0; }
+@media (hover: hover) { .cat.cat-foto:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(15, 27, 33, .18); } .cat-foto:hover .cat-img { transform: scale(1.06); } }
+.cat.cat-foto:active { transform: scale(.98); }
+.cat.cat-foto.resalta { box-shadow: 0 0 0 3px var(--acento), var(--sombra); }
+@media (max-width: 699px) {
+  .rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .cat-foto .cat-pie { padding: 10px 11px; }
+  .cat-foto .cat-nombre { font-size: 14.5px; }
+  .cat-foto .cat-n { font-size: 12.5px; }
+}

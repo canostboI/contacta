@@ -622,8 +622,9 @@
         <a class="b-yo" href="#/cuenta" title="${esc(correo || 'Mi cuenta')}">${esc(ini)}</a>
       </div>`;
     $barra.querySelector('.b-menu').onclick = () => abrirMenu(true);
+    $menu.querySelector('a.m-item[href="#/"]').classList.add('a-inicio'); // «Inicio» hace la misma animación que el logo
     [$menu, $barra].forEach((c) => c.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => {
-      e.preventDefault(); abrirMenu(false); const antes = E.rueda; irInicio(); if (a.querySelector('.logo-cab')) lanzarMini(antes);
+      e.preventDefault(); abrirMenu(false); const antes = E.rueda; irInicio(); lanzarMini(antes);
     }));
     $menu.querySelectorAll('a.m-item').forEach((a) => a.addEventListener('click', () => abrirMenu(false)));
     $menu.querySelector('#m-mapa').onclick = () => {

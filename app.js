@@ -1083,13 +1083,13 @@
       return;
     }
     const tarjetasCat = [
-      ...famsHit.map((f) => ({ href: `#/f/${f.id}`, nombre: f.nombre, sub: 'Categoría', n: C.porFam.get(f.id), fam: f.nombre })),
-      ...ofsHit.map((o) => { const f = IDX.fam.get(o.familia_id) || {}; return { href: `#/f/${f.id}/${o.id}`, nombre: o.nombre, sub: f.nombre || '', n: C.porOf.get(o.id), fam: f.nombre }; })
+      ...famsHit.map((f) => { const top = oficiosDeFam(f.id).sort((a, b) => (C.porOf.get(b.id) || 0) - (C.porOf.get(a.id) || 0))[0]; return { href: `#/f/${f.id}`, nombre: f.nombre, sub: 'Familia', n: C.porFam.get(f.id), fam: f.nombre, foto: top && top.id }; }),
+      ...ofsHit.map((o) => { const f = IDX.fam.get(o.familia_id) || {}; return { href: `#/f/${f.id}/${o.id}`, nombre: o.nombre, sub: f.nombre || '', n: C.porOf.get(o.id), fam: f.nombre, foto: o.id }; })
     ];
     z.innerHTML = `
       ${tarjetasCat.length ? `<div class="seccion-cab"><h2>Categorías</h2></div>
-        <div class="rejilla">${tarjetasCat.map((c) => { const [bg, fg] = tono(c.fam); return `<a class="cat" href="${c.href}"><span class="cat-ico" style="background:${bg}">${icoFam(c.fam, 24, fg)}</span>
-          <span class="cat-nombre">${esc(c.nombre)}</span><span class="cat-n">${c.n || 0}${c.sub ? ' · ' + esc(c.sub) : ''}</span></a>`; }).join('')}</div>` : ''}
+        <div class="rejilla">${tarjetasCat.map((c) => { const n = c.n || 0; return `<a class="cat cat-foto" href="${c.href}" title="${esc(c.sub)}" style="background:${tono(c.fam)[1]}">${fotoOficio(c.foto)}
+          <span class="cat-pie"><span class="cat-nombre">${esc(c.nombre)}</span><span class="cat-n">${n} proveedor${n === 1 ? '' : 'es'}${c.sub === 'Familia' ? ' · Familia' : ''}</span></span></a>`; }).join('')}</div>` : ''}
       ${filtrosHTML()}
       ${grupos.length ? gruposHTML(grupos) : ''}
       ${vistaOtros.length ? `<div class="seccion-cab"><h2>${grupos.length ? 'Otras coincidencias' : 'Proveedores'}</h2><span>${otros.length}</span></div>

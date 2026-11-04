@@ -105,6 +105,14 @@
   }
   function cerrarHoja() { capa.hidden = true; capa.innerHTML = ''; }
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !capa.hidden) cerrarHoja(); });
+  // v1.12.19: arrastrar un proveedor (por su avatar) a otra ventana, p. ej. la hoja del gremio en Excel
+  document.addEventListener('dragstart', (e) => {
+    const a = e.target.closest && e.target.closest('[data-arrastrar]');
+    if (!a) return;
+    e.dataTransfer.clearData();
+    e.dataTransfer.setData('text/plain', a.dataset.arrastrar);
+    e.dataTransfer.effectAllowed = 'copy';
+  });
   function confirmar(titulo, texto, botonTxt, peligro) {
     return new Promise((res) => {
       abrirHoja(`<div class="hoja-asa"></div>
@@ -1075,7 +1083,7 @@
     const oficios = p._ofs.map((o) => o.nombre).join(' · ');
     return `<div class="fila" data-id="${p.id}">
       <div class="fila-enlace" data-abrir="${p.id}" role="link" tabindex="0" title="Ver ficha">
-        <span class="avatar" style="background:${bg};color:${fg}">${esc(iniciales(p.nombre))}</span>
+        <span class="avatar" draggable="true" data-arrastrar="${esc(p.nombre)}" title="Arrastra al Excel (columna EMPRESA)" style="background:${bg};color:${fg}">${esc(iniciales(p.nombre))}</span>
         <span class="fila-txt">
           <span class="fila-nombre">${esc(p.nombre)}${btnCp(p.nombre, 'el nombre')}</span>
           ${oficios ? `<span class="fila-oficio">${esc(oficios)}</span>` : ''}

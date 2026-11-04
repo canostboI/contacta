@@ -565,3 +565,10 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 /* v1.12.17 — Barra superior (ficha y demás pantallas): logos de empresa arriba y Contacta centrado en la línea de abajo */
 .barra-inicio .a-inicio { flex-direction: column; gap: 6px; }
 .barra-inicio .logos-mini { display: inline-flex; align-items: center; gap: 14px; }
+
+/* v1.12.19 — Arrastrar un proveedor al Excel desde su avatar (solo con ratón) */
+@media (hover: hover) and (pointer: fine) {
+  .avatar[data-arrastrar] { cursor: grab; }
+  .avatar[data-arrastrar]:hover { box-shadow: 0 0 0 2px var(--acento); }
+  .avatar[data-arrastrar]:active { cursor: grabbing; }
+}

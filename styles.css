@@ -1,9 +1,9 @@
 /* Contacta — estilo moderno tipo Apple, grises cálidos y rojo Munné solo para «Llamar». */
 :root {
-  --tinta: #575049;
+  --tinta: #26323A;
   --tinta-fuerte: #3E3833;
-  --sec: #736A63;
-  --placeholder: #8A817A;
+  --sec: #5F6B73;
+  --placeholder: #8A949B;
   --fondo: #F5F3F1;
   --campo: #EAE6E2;
   --suave: #F1EEEB;
@@ -48,14 +48,14 @@ svg { flex-shrink: 0; }
 .barra-nav { padding: calc(10px + env(safe-area-inset-top)) 12px 0; display: flex; align-items: center; justify-content: space-between; min-height: 54px; }
 .btn-texto { border: 0; background: transparent; min-height: 44px; padding: 0 8px; font-size: 17px; display: inline-flex; align-items: center; gap: 2px; color: var(--tinta); }
 .btn-texto.fuerte { font-weight: 600; }
-.btn-texto:disabled { color: #B5ADA6; cursor: default; }
+.btn-texto:disabled { color: #AEB6BC; cursor: default; }
 .btn-redondo { width: 44px; height: 44px; border-radius: 22px; border: 0; background: transparent; display: inline-flex; align-items: center; justify-content: center; }
 .btn-redondo.gris { background: var(--campo); }
 
 /* ---------- Buscador ---------- */
 .buscador { display: flex; align-items: center; gap: 8px; }
 .caja-busca { flex: 1; display: flex; align-items: center; gap: 10px; background: var(--blanco); border: 1px solid var(--linea); box-shadow: var(--sombra); border-radius: 16px; padding: 0 12px 0 16px; height: 56px; }
-.caja-busca:focus-within { border-color: #B5ADA6; }
+.caja-busca:focus-within { border-color: #AEB6BC; }
 .caja-busca input { border: 0; outline: none; background: transparent; flex: 1; min-width: 0; font-size: 18px; }
 .borrar-busca[hidden] { display: none; }
 .borrar-busca { width: 26px; height: 26px; border: 0; border-radius: 13px; background: #A39A93; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
@@ -95,7 +95,7 @@ svg { flex-shrink: 0; }
 .pastilla { padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; white-space: nowrap; }
 .pastilla.trab { background: var(--verde-bg); color: var(--verde); }
 .pastilla.ref { background: var(--ref-bg); color: var(--ref); }
-.pastilla.sinv { background: transparent; color: var(--sec); border: 1px dashed #B5ADA6; }
+.pastilla.sinv { background: transparent; color: var(--sec); border: 1px dashed #AEB6BC; }
 .pastilla.inact { background: #EDE7E1; color: #6B625B; }
 .btn-circ { width: 44px; height: 44px; border-radius: 22px; border: 0; background: var(--suave); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .btn-circ.ok { background: var(--verde-bg); }
@@ -138,7 +138,7 @@ svg { flex-shrink: 0; }
 .estrellas { display: inline-flex; gap: 1px; }
 .chev-rot { transition: transform .2s; }
 .abierta .chev-rot { transform: rotate(90deg); }
-.marca-sinv { margin: 0 20px 12px; padding: 10px 14px; border: 1px dashed #B5ADA6; border-radius: 12px; font-size: 14px; color: var(--sec); display: flex; gap: 10px; align-items: center; }
+.marca-sinv { margin: 0 20px 12px; padding: 10px 14px; border: 1px dashed #AEB6BC; border-radius: 12px; font-size: 14px; color: var(--sec); display: flex; gap: 10px; align-items: center; }
 
 /* ---------- Formularios ---------- */
 .form-grupo { margin: 0 20px; background: var(--blanco); border-radius: var(--radio); overflow: hidden; }
@@ -312,8 +312,8 @@ svg { flex-shrink: 0; }
   --campo: #F2F4F6;
   --suave: #F2F4F6;
   --linea: #E7EAEE;
-  --acento: #00879A;          /* turquesa de la marca, oscurecido para leer texto blanco */
-  --acento-suave: #E3F8FA;
+  --acento: #00758D;          /* turquesa de la marca, oscurecido para leer texto blanco */
+  --acento-suave: #E5F3F6;
   --sombra: 0 1px 2px rgba(20, 30, 40, .06);
 }
 /* Franja fina con los colores de la marca arriba del todo */
@@ -325,12 +325,12 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .btn-anadir, .btn-lleno, .chip.on, .sel-chip.on, .oficios .chip.on { background: var(--acento); color: #fff; }
 .btn-anadir:hover, .btn-lleno:hover { filter: brightness(1.08); }
 .caja-busca:focus-within { border-color: var(--acento); box-shadow: 0 0 0 3px var(--acento-suave); }
-.cat:hover { border-color: #BDE9EE; }
+.cat:hover { border-color: #B9DEE6; }
 .cat.resalta { box-shadow: 0 0 0 2px var(--acento); }
 .rueda-sel { background: var(--acento-suave); box-shadow: none; }
-.rueda-item.sel { color: #00606E; }
+.rueda-item.sel { color: #005F72; }
 .seccion-cab .copiar-todos, .volver { color: var(--acento); }
-.btn-valorar { border-color: #BDE9EE; color: #00606E; }
+.btn-valorar { border-color: #B9DEE6; color: #005F72; }
 .btn-valorar:hover { background: var(--acento-suave); }
 .acceso { background: var(--fondo); }
 .acceso-caja .form-grupo { background: var(--campo); }
@@ -361,7 +361,7 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 }
 @keyframes p-atenua { to { opacity: .2; } }
 @keyframes p-icono { 0% { opacity: 0; transform: scale(.94); } 100% { opacity: 1; transform: scale(1); } }
-@keyframes p-brillo { 0% { filter: drop-shadow(0 0 0 rgba(0, 135, 154, 0)); } 45% { filter: drop-shadow(0 0 18px rgba(0, 135, 154, .28)); } 100% { filter: drop-shadow(0 4px 12px rgba(20, 30, 40, .10)); } }
+@keyframes p-brillo { 0% { filter: drop-shadow(0 0 0 rgba(0, 117, 141, 0)); } 45% { filter: drop-shadow(0 0 18px rgba(0, 117, 141, .28)); } 100% { filter: drop-shadow(0 4px 12px rgba(20, 30, 40, .10)); } }
 @keyframes p-sube2 { to { transform: translateY(0); opacity: 1; } }
 @keyframes p-ancho2 { to { width: 64px; } }
 /* ---------- v1.9: logos de empresa en color y saludo cada 2-3 minutos ---------- */
@@ -463,8 +463,8 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 /* v1.9.8 — Botón pequeño de copiar junto al nombre, persona, teléfonos y correos */
 .fd-link { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: inherit; text-decoration: none; }
 .cp { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin-left: 2px; padding: 0; border: 0; border-radius: 7px; background: transparent; cursor: pointer; vertical-align: middle; transition: background .15s; }
-.cp:hover { background: var(--acento-suave, #E3F8FA); }
-.cp:hover svg { stroke: var(--acento, #00879A); }
+.cp:hover { background: var(--acento-suave, #E5F3F6); }
+.cp:hover svg { stroke: var(--acento, #00758D); }
 .cp.hecho { background: #E6F2E8; }
 .fila-nombre .cp { margin-left: 4px; position: relative; top: -1px; }
 
@@ -505,17 +505,17 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .hoja.hoja-zona { max-width: 720px; height: 92vh; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; padding-top: 12px; }
 .hoja-zona .hoja-barra { padding: 0 12px 4px; }
 .hoja-zona .btn-texto[disabled] { opacity: .4; pointer-events: none; }
-.zona-ayuda { margin: 2px 16px 8px !important; color: var(--texto-2, #736A63); font-size: 14px; text-align: center; }
+.zona-ayuda { margin: 2px 16px 8px !important; color: var(--texto-2, #5F6B73); font-size: 14px; text-align: center; }
 .zona-mapa { flex: 1; min-height: 220px; margin: 0 12px; border-radius: 14px; overflow: hidden; border: 1px solid #E7EAEE; background: #F2F4F6; position: relative; z-index: 0; }
-.zona-cargando { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #736A63; font-size: 14px; padding: 16px; text-align: center; }
+.zona-cargando { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #5F6B73; font-size: 14px; padding: 16px; text-align: center; }
 .zona-pie { padding: 12px 16px 0; }
 .zona-radios { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
 .zona-radios::-webkit-scrollbar { display: none; }
 .zona-radios .chip { flex: 0 0 auto; }
-.zona-info { margin: 10px 2px; font-size: 14px; color: #575049; min-height: 20px; }
-.zona-info b { color: #00879A; }
+.zona-info { margin: 10px 2px; font-size: 14px; color: #26323A; min-height: 20px; }
+.zona-info b { color: #00758D; }
 .zona-botones { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.zona-yo { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 22px; border: 1.5px solid #00879A; background: #fff; color: #00879A; font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; }
+.zona-yo { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 22px; border: 1.5px solid #00758D; background: #fff; color: #00758D; font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; }
 .zona-quitar { color: #B4151B !important; }
 
 /* v1.12.3 — Sorpresa del desierto cuando no hay nadie en la zona */
@@ -523,7 +523,7 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .desierto.compacto { padding: 0 0 4px; }
 .desierto-esc { width: 100%; max-width: 360px; height: auto; display: block; margin: 0 auto; overflow: hidden; }
 .desierto.compacto .desierto-esc { max-width: 260px; }
-.desierto-txt { margin: 6px auto 12px !important; max-width: 340px; font-size: 16px; font-weight: 600; color: #575049; }
+.desierto-txt { margin: 6px auto 12px !important; max-width: 340px; font-size: 16px; font-weight: 600; color: #26323A; }
 .desierto.compacto .desierto-txt { font-size: 14px; margin: 2px auto 8px !important; }
 .desierto-btns { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; }
 .d-bola { animation: d-rodar 5.5s linear infinite; }
@@ -538,12 +538,12 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 
 /* v1.12.5 — Ver proveedores en el mapa */
 .seccion-cab .ver-mapa { border: 0; background: transparent; color: var(--acento); font-size: 15px; font-weight: 600; min-height: 40px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; padding: 0 0 0 10px; cursor: pointer; }
-.mp-punto { background: #00879A; color: #fff; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,.25); display: flex !important; align-items: center; justify-content: center; font: 700 13px/1 Inter, -apple-system, sans-serif; }
+.mp-punto { background: #00758D; color: #fff; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,.25); display: flex !important; align-items: center; justify-content: center; font: 700 13px/1 Inter, -apple-system, sans-serif; }
 .mp-lista { max-height: 32vh; overflow-y: auto; padding: 8px 16px 0; }
-.mp-pob { font-weight: 700; font-size: 15px; margin: 4px 0 6px; color: #575049; }
-.mp-fila { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid #E7EAEE; color: #575049; text-decoration: none; font-size: 15px; }
-.mp-nota { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; color: #736A63; white-space: nowrap; }
-.mp-pista { font-size: 13px; color: #736A63; padding: 6px 0; }
+.mp-pob { font-weight: 700; font-size: 15px; margin: 4px 0 6px; color: #26323A; }
+.mp-fila { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid #E7EAEE; color: #26323A; text-decoration: none; font-size: 15px; }
+.mp-nota { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; color: #5F6B73; white-space: nowrap; }
+.mp-pista { font-size: 13px; color: #5F6B73; padding: 6px 0; }
 
 /* v1.12.6 — Cabecera del oficio en el móvil: título arriba y botones (Copiar todos · Mapa) debajo */
 @media (max-width: 640px) {
@@ -572,3 +572,101 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
   .avatar[data-arrastrar]:hover { box-shadow: 0 0 0 2px var(--acento); }
   .avatar[data-arrastrar]:active { cursor: grabbing; }
 }
+
+/* =====================================================================
+   v1.13.0 — Rediseño, paso 1: azul de Bosch Pascual, menú lateral y barra superior
+   ===================================================================== */
+:root {
+  --acento: #00758D;          /* azul del logo de Bosch Pascual */
+  --acento-osc: #005F72;
+  --acento-suave: #E5F3F6;
+  --menu: #0B2E36;            /* petróleo muy oscuro: menú lateral */
+  --tinta: #26323A;
+  --tinta-fuerte: #0F1B21;
+  --sec: #5F6B73;
+  --placeholder: #8A949B;
+  --fondo: #F5F7F8;
+  --blanco: #FFFFFF;
+  --campo: #EEF2F4;
+  --suave: #EEF2F4;
+  --linea: #E3E8EB;
+  --estrella: #F2A900;
+  --radio: 14px;
+  --sombra: 0 1px 2px rgba(15, 27, 33, .05), 0 4px 14px rgba(15, 27, 33, .05);
+  --fuente: 'Inter', -apple-system, system-ui, sans-serif;
+}
+body::before { display: none; }
+.btn-anadir:hover, .btn-lleno:hover { filter: none; background: var(--acento-osc); }
+/* «Llamar» pasa del rojo al azul de acción */
+.btn-circ.rojo, .accion.rojo { background: var(--acento); color: #fff; }
+.accion.rojo:hover, .btn-circ.rojo:hover { background: var(--acento-osc); }
+
+/* Título del inicio */
+.dir-titulo { padding: 8px 0 4px; }
+.titulo { font-size: 32px; font-weight: 800; letter-spacing: -1px; color: var(--tinta-fuerte); }
+.dir-sub { margin: 6px 0 0; font-size: 16px; color: var(--sec); }
+@media (min-width: 700px) { .titulo { font-size: 42px; } .dir-sub { font-size: 18px; } }
+.caja-busca { border-radius: 999px; box-shadow: var(--sombra); }
+
+/* Barra superior (todas las pantallas con sesión) */
+#menu, #barra { display: none; }
+body.con-menu #barra { position: sticky; top: 0; z-index: 30; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; min-height: 64px; padding: env(safe-area-inset-top) 16px 0; background: rgba(255, 255, 255, .96); border-bottom: 1px solid var(--linea); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+#barra .b-menu { grid-column: 1; grid-row: 1; justify-self: start; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--tinta-fuerte); display: inline-flex; align-items: center; justify-content: center; margin-left: -8px; }
+#barra .b-menu:hover { background: var(--suave); }
+#barra .b-logo { grid-column: 1; grid-row: 1; justify-self: start; margin-left: 40px; line-height: 0; }
+#barra .b-logo img { height: 30px; width: auto; display: block; }
+#barra .logos-mini { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 22px; }
+#barra .logos-mini img { display: block; width: auto; }
+#barra .logos-mini img[alt="Bosch Pascual"] { height: 15px; }
+#barra .logos-mini img[alt="RECOP"] { height: 22px; top: 3px; }
+#barra .logos-mini img[alt="Munné"] { height: 19px; }
+#barra .b-der { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 8px; }
+#barra .b-anadir { width: 40px; height: 40px; border-radius: 20px; background: var(--acento); display: inline-flex; align-items: center; justify-content: center; }
+#barra .b-yo { width: 40px; height: 40px; border-radius: 20px; background: var(--menu); color: #fff; font-size: 14px; font-weight: 700; letter-spacing: .3px; display: inline-flex; align-items: center; justify-content: center; }
+#barra .b-yo:hover { box-shadow: 0 0 0 3px var(--acento-suave); }
+
+/* Menú lateral */
+body.con-menu #menu { display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; width: 256px; z-index: 40; background: var(--menu); color: rgba(255, 255, 255, .86); padding: calc(18px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom)); overflow-y: auto; }
+#menu .m-logo { padding: 4px 8px 24px; line-height: 0; }
+#menu .m-logo img { height: 40px; width: auto; display: block; }
+#menu .m-nav { display: flex; flex-direction: column; gap: 4px; }
+#menu .m-item { display: flex; align-items: center; gap: 14px; min-height: 50px; padding: 0 14px; border: 0; border-radius: 12px; background: transparent; color: inherit; font-size: 16px; font-weight: 500; text-align: left; width: 100%; transition: background .15s; }
+#menu .m-item:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+#menu .m-item.on { background: var(--acento); color: #fff; font-weight: 600; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); }
+#menu .m-txt { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; line-height: 1.2; }
+#menu .m-txt small { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 8px; background: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .8); }
+#menu hr { border: 0; border-top: 1px solid rgba(255, 255, 255, .14); margin: 12px 8px; width: auto; }
+#menu-capa { position: fixed; inset: 0; z-index: 39; background: rgba(11, 46, 54, .45); }
+#menu-capa[hidden] { display: none; }
+
+/* Ordenador: menú fijo a la izquierda */
+@media (min-width: 1024px) {
+  body.con-menu { padding-left: 256px; }
+  #barra .b-menu, #barra .b-logo, #barra .b-anadir { display: none; }
+  body.con-menu #barra { padding-left: 28px; padding-right: 28px; }
+  #menu-capa { display: none !important; }
+}
+/* Tableta y móvil: menú desplegable con el botón ☰ */
+@media (max-width: 1023px) {
+  body.con-menu #menu { transform: translateX(-100%); visibility: hidden; transition: transform .25s ease, visibility 0s linear .25s; box-shadow: 8px 0 30px rgba(0, 0, 0, .25); }
+  body.con-menu.menu-abierto #menu { transform: none; visibility: visible; transition: transform .25s ease; }
+}
+@media (max-width: 699px) {
+  body.con-menu #barra { grid-template-columns: auto auto 1fr auto; gap: 6px; min-height: 56px; padding-left: 12px; padding-right: 12px; }
+  #barra .b-menu { grid-column: 1; }
+  #barra .b-logo { grid-column: 2; margin-left: 0; }
+  #barra .b-logo img { height: 24px; }
+  #barra .logos-mini { grid-column: 3; gap: 9px; justify-self: center; }
+  #barra .b-der { grid-column: 4; }
+  #barra .b-yo { display: none; }
+  #barra .logos-mini img[alt="Bosch Pascual"] { height: 8px; }
+  #barra .logos-mini img[alt="RECOP"] { height: 12px; top: 2px; }
+  #barra .logos-mini img[alt="Munné"] { height: 10px; }
+  #barra .b-anadir, #barra .b-yo { width: 36px; height: 36px; }
+  .titulo { font-size: 28px; }
+  .dir-sub { font-size: 15px; }
+}
+/* Con la barra arriba, menos aire en la parte de arriba de cada pantalla */
+.con-menu .cabecera { padding-top: 18px; }
+.con-menu .barra-nav { padding-top: 6px; }
+@media (min-width: 700px) { .con-menu .cabecera { padding-top: 28px; } }

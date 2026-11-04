@@ -37,6 +37,7 @@
   const fecha = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
   const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
   const ancho = () => window.matchMedia('(min-width: 960px)').matches;
+  const escritorio = () => window.matchMedia('(min-width: 1024px)').matches; // menú lateral fijo
   const enLinea = () => navigator.onLine !== false;
 
   /* ---------------- Iconos ---------------- */
@@ -62,7 +63,8 @@
     camara: '<path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="4"/>',
     restaurar: '<path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v4h4"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>',
-    pin: '<path d="M12 21s-7-6.2-7-12a7 7 0 0114 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>'
+    pin: '<path d="M12 21s-7-6.2-7-12a7 7 0 0114 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+    casa: '<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/>'
   };
   const ico = (n, sz = 20, color = 'currentColor', w = 2) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
   const estrella = (fill, sz = 13) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="${fill}" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>`;
@@ -331,7 +333,7 @@
   function saludarLogos() {
     const tipos = ['salto', 'balanceo', 'latido', 'hola'];
     const tipo = tipos[Math.floor(Math.random() * tipos.length)];
-    const els = [...document.querySelectorAll('.logos-mini img, .logo-cab, .barra-inicio .marca')].filter((x) => x.getBoundingClientRect().width);
+    const els = [...document.querySelectorAll('.logos-mini img, .logo-cab')].filter((x) => x.getBoundingClientRect().width && !(x.closest('#menu') && !escritorio()));
     if (!els.length) return;
     let i = Math.floor(Math.random() * els.length);
     if (els.length > 1 && i === ultimoSaludo) i = (i + 1) % els.length;
@@ -362,6 +364,7 @@
   // (globo, «C» y letras); después reaparecen los logos de empresa.
   let miniEnCurso = false;
   function puntosDe(im, paso, umbral) {
+    const conBlancos = !!im.closest('#menu'); // en el menú oscuro las letras del logo son blancas
     const r = im.getBoundingClientRect(); if (!r.width) return [];
     const W = Math.round(r.width), H = Math.round(r.height);
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -369,7 +372,7 @@
     const px = cx.getImageData(0, 0, W, H).data; const out = [];
     for (let y = 0; y < H; y += paso) for (let x = 0; x < W; x += paso) {
       const i = (y * W + x) * 4;
-      if (px[i + 3] > umbral && !(px[i] > 235 && px[i + 1] > 235 && px[i + 2] > 235)) out.push([r.left + x, r.top + y, `rgb(${px[i]},${px[i + 1]},${px[i + 2]})`]);
+      if (px[i + 3] > umbral && (conBlancos || !(px[i] > 235 && px[i + 1] > 235 && px[i + 2] > 235))) out.push([r.left + x, r.top + y, `rgb(${px[i]},${px[i + 1]},${px[i + 2]})`]);
     }
     return out;
   }
@@ -377,8 +380,8 @@
   function miniPortada(ruedaAntes) {
     if (miniEnCurso) return;
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const logo = document.querySelector('.logo-cab');
-    const imgs = [...document.querySelectorAll('.cabecera .logos-mini img')];
+    const logo = document.querySelector(escritorio() ? '#menu .logo-cab' : '#barra .logo-cab');
+    const imgs = [...document.querySelectorAll('#barra .logos-mini img')];
     if (!logo || !logo.getBoundingClientRect().width) return;
     miniEnCurso = true;
     const capa = document.createElement('div'); capa.className = 'mini-capa';
@@ -587,6 +590,47 @@
     });
   }
 
+  /* ---------------- v1.13.0: menú lateral y barra superior ---------------- */
+  const $menu = document.getElementById('menu'), $barra = document.getElementById('barra'), $menuCapa = document.getElementById('menu-capa');
+  function abrirMenu(si) { document.body.classList.toggle('menu-abierto', !!si); $menuCapa.hidden = !si; }
+  $menuCapa.onclick = () => abrirMenu(false);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('menu-abierto')) abrirMenu(false); });
+  const ICO_MENU = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+  function pintarMarco(r) {
+    document.body.classList.add('con-menu');
+    const item = (k, href, icono, txt, extra = '') => `<a class="m-item${k === r ? ' on' : ''}" href="${href}"${k === r ? ' aria-current="page"' : ''}>${ico(icono, 22, 'currentColor', 1.8)}<span class="m-txt">${txt}${extra}</span></a>`;
+    const correo = (yo && yo.email) || (sesion && sesion.user && sesion.user.email) || '';
+    const ini = correo.split('@')[0].split(/[._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '·';
+    $menu.innerHTML = `
+      <div class="m-logo"><a class="a-inicio" href="#/" title="Ir al inicio"><img class="logo-cab" src="marca/contacta_horizontal_oscuro.svg" alt="Contacta"></a></div>
+      <nav class="m-nav">
+        ${item('inicio', '#/', 'casa', 'Inicio')}
+        ${item('alta', '#/alta', 'mas', 'Añadir proveedor')}
+        ${item('papelera', '#/papelera', 'papelera', 'Papelera')}
+        <button type="button" class="m-item" id="m-mapa">${ico('pin', 22, 'currentColor', 1.8)}<span class="m-txt">Mapa</span></button>
+        <hr>
+        ${esAdmin() ? item('admin', '#/admin', 'ajustes', 'Administración', '<small>Solo administradores</small>') : ''}
+        ${item('cuenta', '#/cuenta', 'contacto', 'Mi cuenta / Salir')}
+      </nav>`;
+    $barra.innerHTML = `
+      <button type="button" class="b-menu" aria-label="Abrir menú">${ICO_MENU}</button>
+      <a class="a-inicio b-logo" href="#/" title="Ir al inicio"><img class="logo-cab" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></a>
+      <a class="logos-mini a-inicio" href="#/" title="Ir al inicio"><img src="${IMG.bpLinea}" alt="Bosch Pascual"><img src="${IMG.recop}" alt="RECOP"><img src="${IMG.munne}" alt="Munné"></a>
+      <div class="b-der">
+        <a class="b-anadir" href="#/alta" aria-label="Añadir proveedor" title="Añadir proveedor">${ico('mas', 20, '#fff', 2.4)}</a>
+        <a class="b-yo" href="#/cuenta" title="${esc(correo || 'Mi cuenta')}">${esc(ini)}</a>
+      </div>`;
+    $barra.querySelector('.b-menu').onclick = () => abrirMenu(true);
+    [$menu, $barra].forEach((c) => c.querySelectorAll('.a-inicio').forEach((a) => a.onclick = (e) => {
+      e.preventDefault(); abrirMenu(false); const antes = E.rueda; irInicio(); if (a.querySelector('.logo-cab')) lanzarMini(antes);
+    }));
+    $menu.querySelectorAll('a.m-item').forEach((a) => a.addEventListener('click', () => abrirMenu(false)));
+    $menu.querySelector('#m-mapa').onclick = () => {
+      abrirMenu(false);
+      if (document.getElementById('resultados')) abrirMapaVista(); else { ir('#/'); setTimeout(abrirMapaVista, 120); }
+    };
+  }
+
   /* ---------------- Enrutado ---------------- */
   // #/            → inicio: buscador + categorías
   // #/f/FAM[/OF]  → una categoría (familia) y, si acaso, un oficio dentro
@@ -597,9 +641,10 @@
   let ultimaLista = '#/';
 
   function pintar() {
-    if (!sesion) return pintarAcceso();
+    if (!sesion) { document.body.classList.remove('con-menu'); abrirMenu(false); return pintarAcceso(); }
     if (!D.cargado) return;
     const [r, id, id2] = ruta();
+    pintarMarco({ '': 'inicio', f: 'inicio', p: 'inicio', editar: 'inicio' }[r] || r);
     listaMontada = false;
     if (r === 'p' && id) return pantallaSimple((el) => pintarFicha(el, IDX.porId.get(Number(id))));
     if (r === 'alta') return pantallaSimple((el) => pintarFormulario(el, null));
@@ -616,8 +661,7 @@
     pintarBuscador(document.getElementById('pl'));
   }
   function pantallaSimple(fn) {
-    $app.innerHTML = `<div class="barra-inicio"><a class="a-inicio" href="#/" title="Ir al inicio"><span class="logos-mini"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:11px"><img src="${IMG.recop}" alt="RECOP" style="height:16px"><img src="${IMG.munne}" alt="Munné" style="height:13px"></span><img class="marca" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></a></div><div class="pantalla" id="ps"></div>`;
-    $app.querySelector('.a-inicio').onclick = (e) => { e.preventDefault(); const antes = E.rueda; irInicio(); if (e.target.closest('.marca')) lanzarMini(antes); };
+    $app.innerHTML = `<div class="pantalla" id="ps"></div>`;
     fn(document.getElementById('ps')); window.scrollTo(0, 0);
   }
   // Vuelve al inicio de todo: sin búsqueda ni categoría, rueda arriba
@@ -645,18 +689,12 @@
     const offline = !enLinea();
     el.innerHTML = `
       <header class="cabecera">
-        <div class="cab-fila">
-          <span class="cab-hueco" aria-hidden="true"></span>
-          <a class="logos-mini a-inicio" href="#/" title="Ir al inicio"><img src="${IMG.bpLinea}" alt="Bosch Pascual" style="height:12px"><img src="${IMG.recop}" alt="RECOP" style="height:18px"><img src="${IMG.munne}" alt="Munné" style="height:15px"></a>
-          <div style="display:flex;gap:4px;align-items:center">
-            ${esAdmin() ? `<a class="btn-redondo" href="#/admin" aria-label="Administración" title="Administración">${ico('ajustes', 20, '#736A63', 1.8)}</a>` : `<a class="btn-redondo" href="#/cuenta" aria-label="Mi cuenta" title="Mi cuenta">${ico('salir', 20, '#736A63', 1.8)}</a>`}
-            <a class="btn-redondo" href="#/papelera" aria-label="Papelera" title="Papelera">${ico('papelera', 20, '#736A63', 1.8)}</a>
-            <a class="btn-anadir" href="#/alta" aria-label="Añadir proveedor" title="Añadir proveedor">${ico('mas', 18, '#fff', 2.4)}<span>Añadir</span></a>
-          </div>
+        <div class="dir-titulo">
+          <h1 class="titulo">Directorio de proveedores</h1>
+          <p class="dir-sub">Encuentra y gestiona proveedores del grupo.</p>
         </div>
-        <h1 class="titulo logo-titulo"><a class="a-inicio" href="#/" title="Ir al inicio"><img class="logo-cab" src="marca/contacta_horizontal_blanco.svg" alt="Contacta"></a></h1>
         <div class="buscador">
-          <div class="caja-busca">${ico('buscar', 20, '#736A63', 2.2)}
+          <div class="caja-busca">${ico('buscar', 20, '#5F6B73', 2.2)}
             <label for="q" class="oculto-vis">Buscar</label>
             <input id="q" type="text" placeholder="Buscar oficio, empresa, persona, obra…" autocomplete="off" enterkeyhint="search" value="${esc(E.q)}">
             <button class="borrar-busca" id="q-x" aria-label="Borrar búsqueda" ${E.q ? '' : 'hidden'}>${ico('x', 12, '#fff', 3)}</button>
@@ -787,8 +825,8 @@
         if (!mapa || st.lat == null) return;
         const ll = [st.lat, st.lon];
         if (!circ) {
-          circ = L.circle(ll, { radius: st.r * 1000, color: '#00879A', weight: 2, fillColor: '#00879A', fillOpacity: 0.12 }).addTo(mapa);
-          cen = L.circleMarker(ll, { radius: 6, color: '#fff', weight: 2, fillColor: '#00879A', fillOpacity: 1 }).addTo(mapa);
+          circ = L.circle(ll, { radius: st.r * 1000, color: '#00758D', weight: 2, fillColor: '#00758D', fillOpacity: 0.12 }).addTo(mapa);
+          cen = L.circleMarker(ll, { radius: 6, color: '#fff', weight: 2, fillColor: '#00758D', fillOpacity: 1 }).addTo(mapa);
         } else { circ.setLatLng(ll); circ.setRadius(st.r * 1000); cen.setLatLng(ll); }
         if (centrar) mapa.fitBounds(circ.getBounds(), { padding: [20, 20] });
         okB.disabled = false; contar();
@@ -887,8 +925,8 @@
         if (!mapa || st.lat == null) return contar();
         const ll = [st.lat, st.lon];
         if (!circ) {
-          circ = L.circle(ll, { radius: st.r * 1000, color: '#00879A', weight: 2, fillColor: '#00879A', fillOpacity: 0.10, interactive: false }).addTo(mapa);
-          cen = L.circleMarker(ll, { radius: 6, color: '#fff', weight: 2, fillColor: '#00879A', fillOpacity: 1, interactive: false }).addTo(mapa);
+          circ = L.circle(ll, { radius: st.r * 1000, color: '#00758D', weight: 2, fillColor: '#00758D', fillOpacity: 0.10, interactive: false }).addTo(mapa);
+          cen = L.circleMarker(ll, { radius: 6, color: '#fff', weight: 2, fillColor: '#00758D', fillOpacity: 1, interactive: false }).addTo(mapa);
         } else { circ.setLatLng(ll); circ.setRadius(st.r * 1000); cen.setLatLng(ll); }
         if (centrar) mapa.fitBounds(circ.getBounds(), { padding: [20, 20] });
         okB.disabled = false; contar();
@@ -986,7 +1024,7 @@
       z.querySelector('#of-tit').textContent = op.id ? op.nombre : 'Oficios';
       z.querySelector('#of-n').textContent = n;
     };
-    montarRueda(z.querySelector('#rueda'), opciones.map((x) => ({ label: x.nombre, icon: x.id ? icoFam(x.nombre, 20, '#575049') : '' })), E.rueda, true,
+    montarRueda(z.querySelector('#rueda'), opciones.map((x) => ({ label: x.nombre, icon: x.id ? icoFam(x.nombre, 20, '#26323A') : '' })), E.rueda, true,
       (i) => { E.rueda = i; filtrar(i); }, (i) => { E.rueda = i; filtrar(i); });
     filtrar(E.rueda);
     engancharFiltros(z);
@@ -1001,7 +1039,7 @@
     z.innerHTML = `
       <div class="cat-banda" style="background:${bg}">
       <div class="cat-cab">
-        <a class="volver" href="#/">${ico('atras', 18, '#00879A', 2.2)}Categorías</a>
+        <a class="volver" href="#/">${ico('atras', 18, '#00758D', 2.2)}Categorías</a>
         <div class="cat-titulo"><span class="cat-ico" style="background:#fff">${icoFam(f.nombre, 26, fg)}</span><h2>${esc(f.nombre)}</h2></div>
       </div>
       <div class="oficios">
@@ -1063,13 +1101,13 @@
   function gruposHTML(grupos) {
     return grupos.map((g, gi) => `
       <div class="seccion-cab"><h2>${esc(g.titulo)}</h2><span>${g.items.length}</span>
-        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#00879A')}<span>Copiar todos</span></button></div>
+        <button class="copiar-todos" data-g="${gi}">${ico('copiar', 16, '#00758D')}<span>Copiar todos</span></button></div>
       <div class="tarjeta">${g.items.map((p) => filaHTML(p, g.fam)).join('')}</div>`).join('');
   }
   function engancharGrupos(z, grupos) {
     z.querySelectorAll('.copiar-todos').forEach((b) => b.onclick = async () => {
       const g = grupos[Number(b.dataset.g)];
-      if (await copiarProveedores(g.items)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#00879A') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.items.length} proveedores copiados. Pégalos en la columna EMPRESA de la hoja del gremio.`); }
+      if (await copiarProveedores(g.items)) { b.innerHTML = ico('ok', 16, '#2F6B3C', 2.4) + '<span>Copiados</span>'; setTimeout(() => { b.innerHTML = ico('copiar', 16, '#00758D') + '<span>Copiar todos</span>'; }, 1500); aviso(`${g.items.length} proveedores copiados. Pégalos en la columna EMPRESA de la hoja del gremio.`); }
     });
     engancharFilas(z);
   }
@@ -1094,11 +1132,11 @@
           </span>
           <span class="fila-val">
             ${p._n ? `${estrellas(Math.round(p._media), 16)}<span class="val-num">${p._media.toFixed(1).replace('.', ',')}</span><span class="val-cuantas">(${p._n} valoraci${p._n === 1 ? 'ón' : 'ones'})</span>` : '<span class="val-cuantas">Sin valoraciones</span>'}
-            ${p.eliminado_en ? '' : (() => { const mia = p._vals.find((v) => sesion && v.usuario_id === sesion.user.id); return `<button class="btn-valorar" data-valorar="${p.id}" title="${mia ? 'Cambiar mi valoración' : 'Valorar este proveedor'}">${mia ? `${estrella('#E8A317', 13)} Mi nota: ${mia.estrellas}` : `${ico('mas', 14, '#575049', 2.4)} Valorar`}</button>`; })()}
+            ${p.eliminado_en ? '' : (() => { const mia = p._vals.find((v) => sesion && v.usuario_id === sesion.user.id); return `<button class="btn-valorar" data-valorar="${p.id}" title="${mia ? 'Cambiar mi valoración' : 'Valorar este proveedor'}">${mia ? `${estrella('#E8A317', 13)} Mi nota: ${mia.estrellas}` : `${ico('mas', 14, '#26323A', 2.4)} Valorar`}</button>`; })()}
           </span>
         </span>
       </div>
-      <button class="btn-circ solo-ancho" data-copiar="${p.id}" aria-label="Copiar ${esc(p.nombre)}">${ico('copiar', 18, '#575049')}</button>
+      <button class="btn-circ solo-ancho" data-copiar="${p.id}" aria-label="Copiar ${esc(p.nombre)}">${ico('copiar', 18, '#26323A')}</button>
       <a class="btn-circ" ${moviles[0] ? `href="https://wa.me/${telLink(moviles[0]).replace('+', '')}" target="_blank" rel="noopener"` : 'aria-disabled="true"'} aria-label="WhatsApp a ${esc(p.nombre)}">${ico('wa', 19, '#2F6B3C')}</a>
       <a class="btn-circ rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'} aria-label="Llamar a ${esc(p.nombre)}">${ico('tel', 19, '#fff')}</a>
     </div>`;
@@ -1197,7 +1235,7 @@
   const abiertas = new Set();
   function pintarFicha(el, p) {
     if (!p || (p.eliminado_en && !esAdmin() && Date.now() - new Date(p.eliminado_en) > DIAS_PAPELERA * 864e5)) {
-      el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#575049', 2.2)}Contacta</a></div><div class="vacio"><h2>Este proveedor no existe</h2><p>Puede que lo hayan eliminado.</p></div>`; return;
+      el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#26323A', 2.2)}Contacta</a></div><div class="vacio"><h2>Este proveedor no existe</h2><p>Puede que lo hayan eliminado.</p></div>`; return;
     }
     const famN = p._fam; const moviles = partes(p.moviles); const fijos = partes(p.fijos); const emails = partes(p.emails);
     const telf = moviles[0] || fijos[0]; const mia = p._vals.find((v) => sesion && v.usuario_id === sesion.user.id);
@@ -1212,7 +1250,7 @@
     if (p.recomendado_por) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Recomendado por</span><span class="v">${esc(p.recomendado_por)}</span></div></div>`);
     const borrado = !!p.eliminado_en;
     el.innerHTML = `
-      <div class="barra-nav"><a class="btn-texto" href="${esc(ultimaLista)}">${ico('atras', 22, '#575049', 2.2)}Volver</a><span></span>
+      <div class="barra-nav"><a class="btn-texto" href="${esc(ultimaLista)}">${ico('atras', 22, '#26323A', 2.2)}Volver</a><span></span>
         ${borrado ? '' : `<a class="btn-texto" href="#/editar/${p.id}">Editar</a>`}</div>
       ${borrado ? `<div class="marca-sinv" style="border-style:solid;background:#FFF4D6;color:#6B5310">${ico('papelera', 18, '#6B5310', 1.8)}<span>Está en la papelera. <a href="#/papelera" style="text-decoration:underline">Ver papelera</a></span></div>` : ''}
       <div class="identidad ficha-color" style="background:${tono(famN)[0]}">
@@ -1225,17 +1263,17 @@
       <div class="acciones">
         <a class="accion rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'}><span class="acc-ico">${ico('tel', 20, '#fff')}</span>Llamar</a>
         <a class="accion" ${moviles[0] ? `href="https://wa.me/${telLink(moviles[0]).replace('+', '')}" target="_blank" rel="noopener"` : 'aria-disabled="true"'}><span class="acc-ico" style="background:#E3F5EA">${ico('wa', 20, '#1E8E4E')}</span>WhatsApp</a>
-        <a class="accion" ${emails[0] ? `href="mailto:${esc(emails[0])}"` : 'aria-disabled="true"'}><span class="acc-ico" style="background:#E3F8FA">${ico('correo', 20, '#00879A')}</span>Correo</a>
+        <a class="accion" ${emails[0] ? `href="mailto:${esc(emails[0])}"` : 'aria-disabled="true"'}><span class="acc-ico" style="background:#E3F8FA">${ico('correo', 20, '#00758D')}</span>Correo</a>
         <button class="accion" id="a-copiar"><span class="acc-ico" style="background:#F3F5D9">${ico('copiar', 20, '#7E8A12')}</span><span>Copiar</span></button>
         <button class="accion" id="a-vcf"><span class="acc-ico" style="background:#E2EEF8">${ico('contacto', 20, '#007BAC')}</span><span>Guardar en contactos</span></button>
         <button class="accion" id="a-compartir"><span class="acc-ico" style="background:#FDE6EA">${ico('compartir', 20, '#E0284F')}</span><span>Compartir</span></button>
       </div>
-      ${p.sin_verificar ? `<div class="marca-sinv" style="margin-top:12px">${ico('info', 18, '#736A63', 1.8)}<span>No pudimos confirmar que siga activa. Si hablas con ellos, edita o valora la ficha y la marca desaparece.</span></div>` : ''}
+      ${p.sin_verificar ? `<div class="marca-sinv" style="margin-top:12px">${ico('info', 18, '#5F6B73', 1.8)}<span>No pudimos confirmar que siga activa. Si hablas con ellos, edita o valora la ficha y la marca desaparece.</span></div>` : ''}
       ${datos.length ? `<div class="seccion"><span class="etiqueta-sec">Contacto</span></div><div class="tarjeta">${datos.join('')}</div>` : ''}
       <div class="seccion"><span class="etiqueta-sec">Valoraciones</span>
         ${p._n ? `<span style="display:flex;align-items:center;gap:4px;font-size:15px;font-weight:600">${estrella('#E8A317', 14)}${p._media.toFixed(1).replace('.', ',')}<span style="font-weight:400;color:var(--sec)">· ${p._n}</span></span>` : ''}</div>
       ${p._n ? `<div class="tarjeta">${p._vals.map((v) => valoracionHTML(v)).join('')}</div>` : `<div class="ayuda" style="padding-top:0">Nadie la ha valorado todavía.</div>`}
-      ${borrado ? '' : `<div style="margin:10px 20px 0"><button class="btn-blanco" id="a-valorar">${ico(mia ? 'ok' : 'mas', 18, '#575049')}${mia ? 'Cambiar mi valoración' : 'Añadir valoración'}</button></div>`}
+      ${borrado ? '' : `<div style="margin:10px 20px 0"><button class="btn-blanco" id="a-valorar">${ico(mia ? 'ok' : 'mas', 18, '#26323A')}${mia ? 'Cambiar mi valoración' : 'Añadir valoración'}</button></div>`}
       ${p.notas ? `<div class="seccion"><span class="etiqueta-sec">Notas</span></div><div class="tarjeta"><div class="texto-bloque">${esc(p.notas)}</div></div>` : ''}
       <div class="pie">Añadido por ${esc(nombreUsuario(p.creado_por, p.creado_por_texto))} · ${fecha(p.created_at)}${p.updated_at && p.updated_at !== p.created_at ? ` · Última edición ${hace(p.updated_at)}` : ''}</div>
       ${borrado ? '' : `<div style="margin:22px 20px 0"><button class="btn-blanco btn-peligro" id="a-eliminar">${ico('papelera', 18, '#B4151B', 1.8)}Eliminar proveedor</button></div>`}
@@ -1262,7 +1300,7 @@
   }
   function datoCopiable(k, v, href) {
     return `<div class="dato"><div class="dato-txt"><span class="k">${esc(k)}</span>${href ? `<a class="v" href="${esc(href)}">${esc(v)}</a>` : `<span class="v">${esc(v)}</span>`}</div>
-      <button class="btn-copiar" data-copia="${esc(v)}" aria-label="Copiar ${esc(k.toLowerCase())}">${ico('copiar', 16, '#575049')}<span>Copiar</span></button></div>`;
+      <button class="btn-copiar" data-copia="${esc(v)}" aria-label="Copiar ${esc(k.toLowerCase())}">${ico('copiar', 16, '#26323A')}<span>Copiar</span></button></div>`;
   }
   function valoracionHTML(v) {
     const ab = abiertas.has(String(v.id));
@@ -1322,8 +1360,8 @@
     abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><span></span><div class="hoja-titulo">Compartir</div><button class="btn-texto" data-c>Cerrar</button></div>
       <div class="tarjeta" style="margin-top:10px"><div class="texto-bloque">${esc(texto)}</div></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 20px 0">
-        <button class="btn-blanco" id="sh-copiar">${ico('copiar', 18, '#575049')}Copiar</button>
-        <a class="btn-blanco" href="mailto:?subject=${encodeURIComponent('Proveedor: ' + p.nombre)}&body=${encodeURIComponent(texto)}">${ico('correo', 18, '#575049')}Enviar por correo</a>
+        <button class="btn-blanco" id="sh-copiar">${ico('copiar', 18, '#26323A')}Copiar</button>
+        <a class="btn-blanco" href="mailto:?subject=${encodeURIComponent('Proveedor: ' + p.nombre)}&body=${encodeURIComponent(texto)}">${ico('correo', 18, '#26323A')}Enviar por correo</a>
       </div>`, (h) => {
       h.querySelector('[data-c]').onclick = cerrarHoja;
       h.querySelector('#sh-copiar').onclick = async (e) => { if (await copiarTexto(texto)) marcarCopiado(e.currentTarget, true); };
@@ -1393,8 +1431,8 @@
       <form id="f-prov" novalidate>
       <div class="barra-nav"><a class="btn-texto" href="${editar ? '#/p/' + p.id : '#/'}">Cancelar</a><div class="hoja-titulo">${editar ? 'Editar proveedor' : 'Nuevo proveedor'}</div><button class="btn-texto fuerte" type="submit" id="g-btn">Guardar</button></div>
       ${editar ? '' : `<div class="etiqueta-sec" style="padding:14px 36px 6px">Rellenar automáticamente</div>
-      <div class="relleno"><button type="button" class="btn-blanco" id="b-pegar">${ico('pegar', 18, '#575049')}Pegar texto o imagen</button>
-        <button type="button" class="btn-blanco" id="b-foto">${ico('camara', 18, '#575049')}Pantallazo</button>
+      <div class="relleno"><button type="button" class="btn-blanco" id="b-pegar">${ico('pegar', 18, '#26323A')}Pegar texto o imagen</button>
+        <button type="button" class="btn-blanco" id="b-foto">${ico('camara', 18, '#26323A')}Pantallazo</button>
         <input type="file" id="b-foto-in" accept="image/*" hidden></div>
       <div class="ayuda">Pega un mensaje de WhatsApp, una firma de correo o una tarjeta, o sube un pantallazo, y la IA rellena los datos. Revísalos antes de guardar.</div>`}
       <div class="etiqueta-sec" style="padding:18px 36px 6px">Datos</div>
@@ -1428,8 +1466,8 @@
     const pintarChips = () => {
       const c = el.querySelector('#chips');
       c.innerHTML = `<span class="oblig" style="font-size:16px;margin-right:6px">Oficio</span>` + st.ofs.map((id) => {
-        const o = IDX.of.get(id); return o ? `<span class="chip-of">${esc(o.nombre)}<button type="button" data-q="${id}" aria-label="Quitar ${esc(o.nombre)}">${ico('x', 12, '#736A63', 2.6)}</button></span>` : '';
-      }).join('') + `<button type="button" class="chip" id="add-of">${ico('mas', 14, '#575049', 2.4)}${st.ofs.length ? 'Otro' : 'Elegir oficio'}</button>`;
+        const o = IDX.of.get(id); return o ? `<span class="chip-of">${esc(o.nombre)}<button type="button" data-q="${id}" aria-label="Quitar ${esc(o.nombre)}">${ico('x', 12, '#5F6B73', 2.6)}</button></span>` : '';
+      }).join('') + `<button type="button" class="chip" id="add-of">${ico('mas', 14, '#26323A', 2.4)}${st.ofs.length ? 'Otro' : 'Elegir oficio'}</button>`;
       c.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => { st.ofs = st.ofs.filter((x) => x !== Number(b.dataset.q)); pintarChips(); });
       c.querySelector('#add-of').onclick = () => hojaOficio((id) => { if (!st.ofs.includes(id)) st.ofs.push(id); pintarChips(); });
     };
@@ -1541,19 +1579,19 @@
           .filter((x) => x.ok).sort((a, b) => b.s - a.s).slice(0, 12);
         bar.innerHTML = `<button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Oficio</div><span></span>`;
         cuerpo.innerHTML = `<div class="tarjeta" style="margin-top:8px">${res.map((x) => `<div class="fila"><button class="fila-enlace" data-of="${x.o.id}"><div class="fila-txt"><div class="fila-nombre">${esc(x.o.nombre)}</div><div class="fila-meta">${esc((IDX.fam.get(x.o.familia_id) || {}).nombre || '')}</div></div></button></div>`).join('') || '<div class="texto-bloque" style="color:var(--sec)">Ningún oficio coincide.</div>'}</div>
-          <div style="margin:10px 20px 0"><button class="btn-blanco" id="ho-nuevo">${ico('mas', 18, '#575049')}Añadir oficio nuevo: «${esc(q)}»</button></div>`;
+          <div style="margin:10px 20px 0"><button class="btn-blanco" id="ho-nuevo">${ico('mas', 18, '#26323A')}Añadir oficio nuevo: «${esc(q)}»</button></div>`;
         cuerpo.querySelectorAll('[data-of]').forEach((b) => b.onclick = () => { cerrarHoja(); alElegir(Number(b.dataset.of)); });
         cuerpo.querySelector('#ho-nuevo').onclick = () => crearOficio(q, fams[fi]);
       } else if (nivel === 'fam') {
         bar.innerHTML = `<button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Familia</div><button class="btn-texto fuerte" id="ho-sig">Siguiente</button>`;
         cuerpo.innerHTML = '<div id="ho-rueda"></div>';
-        montarRueda(cuerpo.querySelector('#ho-rueda'), fams.map((f) => ({ label: f.nombre, icon: icoFam(f.nombre, 20, '#575049'), chev: true })), fi, true, (i) => { fi = i; }, (i) => { fi = i; nivel = 'of'; oi = 0; pintarH(h); });
+        montarRueda(cuerpo.querySelector('#ho-rueda'), fams.map((f) => ({ label: f.nombre, icon: icoFam(f.nombre, 20, '#26323A'), chev: true })), fi, true, (i) => { fi = i; }, (i) => { fi = i; nivel = 'of'; oi = 0; pintarH(h); });
         bar.querySelector('#ho-sig').onclick = () => { nivel = 'of'; oi = 0; pintarH(h); };
       } else {
         const ofs = oficiosDeFam(fams[fi].id);
-        bar.innerHTML = `<button class="btn-texto" id="ho-atr">${ico('atras', 20, '#575049', 2.2)}Familias</button><div class="hoja-titulo" style="font-size:15px">${esc(fams[fi].nombre)}</div><button class="btn-texto fuerte" id="ho-ok">Hecho</button>`;
+        bar.innerHTML = `<button class="btn-texto" id="ho-atr">${ico('atras', 20, '#26323A', 2.2)}Familias</button><div class="hoja-titulo" style="font-size:15px">${esc(fams[fi].nombre)}</div><button class="btn-texto fuerte" id="ho-ok">Hecho</button>`;
         cuerpo.innerHTML = '<div id="ho-rueda"></div><div style="margin:4px 20px 0"><button class="btn-texto" id="ho-nuevo2" style="font-size:15px">¿No está? Añadir oficio nuevo</button></div>';
-        montarRueda(cuerpo.querySelector('#ho-rueda'), ofs.map((o) => ({ label: o.nombre, icon: icoFam(fams[fi].nombre, 20, '#575049') })), oi, ofs.length >= 6, (i) => { oi = i; }, (i) => { cerrarHoja(); alElegir(ofs[i].id); });
+        montarRueda(cuerpo.querySelector('#ho-rueda'), ofs.map((o) => ({ label: o.nombre, icon: icoFam(fams[fi].nombre, 20, '#26323A') })), oi, ofs.length >= 6, (i) => { oi = i; }, (i) => { cerrarHoja(); alElegir(ofs[i].id); });
         bar.querySelector('#ho-atr').onclick = () => { nivel = 'fam'; pintarH(h); };
         bar.querySelector('#ho-ok').onclick = () => { cerrarHoja(); if (ofs[oi]) alElegir(ofs[oi].id); };
         cuerpo.querySelector('#ho-nuevo2').onclick = () => { h.querySelector('#ho-q').focus(); aviso('Escribe el nombre del oficio arriba', false); };
@@ -1577,7 +1615,7 @@
       });
     };
     abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra" id="ho-bar"></div>
-      <div class="buscador" style="padding:10px 20px 4px"><div class="caja-busca">${ico('buscar', 17, '#736A63', 2.2)}<label for="ho-q" class="oculto-vis">Buscar oficio</label><input id="ho-q" type="text" placeholder="Buscar oficio (manyà, lampista…)" autocomplete="off"></div></div>
+      <div class="buscador" style="padding:10px 20px 4px"><div class="caja-busca">${ico('buscar', 17, '#5F6B73', 2.2)}<label for="ho-q" class="oculto-vis">Buscar oficio</label><input id="ho-q" type="text" placeholder="Buscar oficio (manyà, lampista…)" autocomplete="off"></div></div>
       <div id="ho-cuerpo"></div>`, (h) => {
       h.querySelector('#ho-q').oninput = debounce(() => pintarH(h), 120);
       pintarH(h);
@@ -1675,15 +1713,15 @@
   }
   function pintarPapelera(el) {
     const l = D.prov.filter((p) => p.eliminado_en).sort((a, b) => b.eliminado_en.localeCompare(a.eliminado_en));
-    el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#575049', 2.2)}Contacta</a></div>
+    el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#26323A', 2.2)}Contacta</a></div>
       <div style="padding:4px 20px 12px"><h1 class="titulo">Papelera</h1><div style="color:var(--sec);margin-top:6px;font-size:15px;line-height:1.4">Proveedores eliminados en los últimos 30 días. Cualquiera puede restaurarlos; después, solo el administrador.</div></div>
       ${l.length ? `<div class="tarjeta">${l.map((p) => {
         const dias = DIAS_PAPELERA - Math.floor((Date.now() - new Date(p.eliminado_en)) / 864e5);
-        return `<div class="fila"><div class="ico-caja" style="opacity:.6">${icoFam(p._fam, 20, '#575049')}</div><div class="fila-txt">
+        return `<div class="fila"><div class="ico-caja" style="opacity:.6">${icoFam(p._fam, 20, '#26323A')}</div><div class="fila-txt">
           <div class="fila-nombre">${esc(p.nombre)}</div>
           <div class="fila-meta" style="white-space:normal;flex-wrap:wrap">${esc(nombreUsuario(p.eliminado_por))} · ${hace(p.eliminado_en)}${p.motivo_eliminacion ? ' · ' + esc(p.motivo_eliminacion) : ''}
             <span class="pastilla" style="${dias <= 5 ? 'background:#FBE3E1;color:#9C1C1C' : 'background:var(--suave)'}">${dias > 0 ? `Quedan ${dias} días` : 'Solo administrador'}</span></div></div>
-          <div style="display:flex;flex-direction:column;gap:4px"><button class="chip" data-rest="${p.id}">${ico('restaurar', 14, '#575049', 2)}Restaurar</button>
+          <div style="display:flex;flex-direction:column;gap:4px"><button class="chip" data-rest="${p.id}">${ico('restaurar', 14, '#26323A', 2)}Restaurar</button>
           ${esAdmin() ? `<button class="chip btn-peligro" data-borrar="${p.id}">Borrar</button>` : ''}</div></div>`;
       }).join('')}</div>` : `<div class="vacio">${ico('papelera', 40, '#B5ADA6', 1.4)}<p>La papelera está vacía.</p></div>`}
       <div class="ayuda" style="padding-top:12px">Al restaurar, la ficha vuelve con sus oficios y valoraciones.</div>`;
@@ -1699,13 +1737,13 @@
 
   /* ---------------- Cuenta ---------------- */
   function pintarCuenta(el) {
-    el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#575049', 2.2)}Contacta</a></div>
+    el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#26323A', 2.2)}Contacta</a></div>
       <div style="padding:4px 20px 12px"><h1 class="titulo">Mi cuenta</h1></div>
       <div class="tarjeta"><div class="dato"><div class="dato-txt"><span class="k">Correo</span><span class="v">${esc(sesion.user.email)}</span></div></div>
       <div class="dato"><div class="dato-txt"><span class="k">Empresa</span><span class="v">${esc(yo ? yo.empresa : '')}</span></div></div>
       <div class="dato"><div class="dato-txt"><span class="k">Datos descargados</span><span class="v">${D.desde ? hace(D.desde) : '—'} · ${vivos().length} proveedores</span></div></div></div>
       <div style="margin:14px 20px 0;display:flex;flex-direction:column;gap:8px">
-        <button class="btn-blanco" id="c-act">${ico('restaurar', 18, '#575049')}Actualizar datos</button>
+        <button class="btn-blanco" id="c-act">${ico('restaurar', 18, '#26323A')}Actualizar datos</button>
         <button class="btn-blanco" id="c-pass">Cambiar contraseña</button>
         <button class="btn-blanco btn-peligro" id="c-salir">${ico('salir', 18, '#B4151B')}Cerrar sesión</button></div>
       <div class="pie" style="text-align:center">Contacta ${esc(CFG.version)}</div>`;
@@ -1720,7 +1758,7 @@
     const nuevos = D.oficios.filter((o) => o.nuevo && !o.redirige_a);
     const dups = D.prov.filter((p) => p.revisar_duplicado && !p.eliminado_en);
     const semana = D.prov.filter((p) => p.eliminado_en && Date.now() - new Date(p.eliminado_en) < 7 * 864e5);
-    el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#575049', 2.2)}Contacta</a><span></span><a class="btn-texto" href="#/cuenta">Mi cuenta</a></div>
+    el.innerHTML = `<div class="barra-nav"><a class="btn-texto" href="#/">${ico('atras', 22, '#26323A', 2.2)}Contacta</a><span></span><a class="btn-texto" href="#/cuenta">Mi cuenta</a></div>
       <div style="padding:4px 20px 12px"><h1 class="titulo">Administración</h1></div>
       <div class="pestanas" role="tablist">${[['avisos', 'Revisar'], ['usuarios', 'Usuarios'], ['historial', 'Historial'], ['datos', 'Datos']].map(([k, t]) => `<button role="tab" class="${pestana === k ? 'on' : ''}" data-t="${k}">${t}</button>`).join('')}</div>
       <div id="adm"></div>`;
@@ -1778,7 +1816,7 @@
       const total = vivos().length; const sinv = vivos().filter((p) => p.sin_verificar).length; const trab = vivos().filter((p) => p._trab).length;
       z.innerHTML = `<div class="seccion"><span class="etiqueta-sec">Resumen</span></div><div class="tarjeta">
         ${[['Proveedores', total], ['Trabajado con nosotros', trab], ['Sin verificar', sinv], ['Cerrados', vivos().filter((p) => p.estado === 'inactivo').length], ['Valoraciones', D.vals.length], ['Oficios', oficiosVivos().length], ['Usuarios', D.usuarios.length]].map(([k, v]) => `<div class="dato"><div class="dato-txt"><span class="k">${k}</span><span class="v">${v}</span></div></div>`).join('')}</div>
-        <div style="margin:14px 20px 0"><button class="btn-blanco" id="exp">${ico('copiar', 18, '#575049')}Copiar todos los proveedores (para Excel)</button></div>
+        <div style="margin:14px 20px 0"><button class="btn-blanco" id="exp">${ico('copiar', 18, '#26323A')}Copiar todos los proveedores (para Excel)</button></div>
         <div class="ayuda">Copia la base entera con todas las columnas para pegarla en un Excel de copia de seguridad.</div>`;
       z.querySelector('#exp').onclick = async (e) => {
         const cab = ['ID', 'EMPRESA', 'OFICIOS', 'PERSONA', 'MÓVIL', 'FIJO', 'EMAIL', 'WEB', 'POBLACIÓN', 'PROVINCIA', 'CIF', 'NOTAS', 'ESTADO', 'SIN VERIFICAR', 'VALORACIÓN', 'Nº VALORACIONES'];

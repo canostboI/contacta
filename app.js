@@ -1512,9 +1512,14 @@
       el.querySelector('#b-importar').onclick = () => hojaImportar(aplicar);
       // Soltar un archivo en cualquier parte del formulario de alta
       const fp = el.querySelector('#f-prov');
-      fp.addEventListener('dragover', (e) => { if ([...(e.dataTransfer.types || [])].includes('Files')) { e.preventDefault(); fp.classList.add('soltando'); } });
+      fp.addEventListener('dragover', (e) => { if (e.target.closest('input, textarea')) return; e.preventDefault(); fp.classList.add('soltando'); });
       fp.addEventListener('dragleave', (e) => { if (!fp.contains(e.relatedTarget)) fp.classList.remove('soltando'); });
-      fp.addEventListener('drop', (e) => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (!f) return; e.preventDefault(); fp.classList.remove('soltando'); leerArchivo(f, '', aplicar); });
+      fp.addEventListener('drop', (e) => {
+        if (e.target.closest('input, textarea')) return;
+        e.preventDefault(); fp.classList.remove('soltando');
+        const f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) leerArchivo(f, '', aplicar); else avisoOutlook();
+      });
       const pintarE = () => { el.querySelectorAll('#alta-est [data-n]').forEach((b) => { b.innerHTML = estrella(Number(b.dataset.n) <= st.estrellas ? '#E8A317' : '#E6E1DC', 32); }); el.querySelector('#alta-obra').hidden = !st.estrellas; };
       el.querySelectorAll('#alta-est [data-n]').forEach((b) => b.onclick = () => { const k = Number(b.dataset.n); st.estrellas = st.estrellas === k ? 0 : k; pintarE(); });
     }
@@ -1653,6 +1658,8 @@
     if (f.size > 5.5 * 1024 * 1024) return aviso('El archivo es demasiado grande (máx. 5 MB).', false);
     cerrarHoja(); leerConIA({ texto, archivo: f }, aplicar);
   }
+  // Outlook (y otros programas) no entregan el archivo al arrastrarlo al navegador.
+  function avisoOutlook() { aviso('No ha llegado ningún archivo. Si viene de Outlook, guárdalo antes en el escritorio («Guardar como») y arrástralo desde allí.', false); }
   function hojaImportar(aplicar) {
     let pend = null; // archivo elegido, pegado o soltado, a la espera de «Rellenar»
     abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Importar datos</div><button class="btn-texto fuerte" id="im-ok">Rellenar</button></div>
@@ -1677,7 +1684,7 @@
       inp.onchange = () => { poner(inp.files[0]); inp.value = ''; };
       zona.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); zona.classList.add('encima'); });
       zona.addEventListener('dragleave', () => zona.classList.remove('encima'));
-      zona.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); zona.classList.remove('encima'); poner(e.dataTransfer.files && e.dataTransfer.files[0]); });
+      zona.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); zona.classList.remove('encima'); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) poner(f); else avisoOutlook(); });
       h.addEventListener('paste', (e) => {
         const it = [...(e.clipboardData && e.clipboardData.items || [])].find((x) => x.kind === 'file');
         if (!it) return; // texto: se pega normal en la caja

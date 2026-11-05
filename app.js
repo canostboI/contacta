@@ -61,6 +61,7 @@
     salir: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
     pegar: '<path d="M9 4h6v3H9zM7 5H5v16h14V5h-2M8 12h8M8 16h5"/>',
     camara: '<path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="4"/>',
+    importar: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
     restaurar: '<path d="M4 12a8 8 0 108-8 8 8 0 00-6 2.7M4 4v4h4"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>',
     pin: '<path d="M12 21s-7-6.2-7-12a7 7 0 0114 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
@@ -1453,10 +1454,8 @@
       <form id="f-prov" novalidate>
       <div class="barra-nav"><a class="btn-texto" href="${editar ? '#/p/' + p.id : '#/'}">Cancelar</a><div class="hoja-titulo">${editar ? 'Editar proveedor' : 'Nuevo proveedor'}</div><button class="btn-texto fuerte" type="submit" id="g-btn">Guardar</button></div>
       ${editar ? '' : `<div class="etiqueta-sec" style="padding:14px 36px 6px">Rellenar automáticamente</div>
-      <div class="relleno"><button type="button" class="btn-blanco" id="b-pegar">${ico('pegar', 18, '#26323A')}Pegar texto o imagen</button>
-        <button type="button" class="btn-blanco" id="b-foto">${ico('camara', 18, '#26323A')}Pantallazo</button>
-        <input type="file" id="b-foto-in" accept="image/*" hidden></div>
-      <div class="ayuda">Pega un mensaje de WhatsApp, una firma de correo o una tarjeta, o sube un pantallazo, y la IA rellena los datos. Revísalos antes de guardar.</div>`}
+      <div class="relleno uno"><button type="button" class="btn-importar" id="b-importar">${ico('importar', 22, '#00758D', 2.2)}<span class="bi-txt"><b>Importar datos</b><small>Rellenar con IA</small></span></button></div>
+      <div class="ayuda">Un PDF, un pantallazo, una foto o un texto copiado (WhatsApp, firma de correo, carta de presentación…). Puedes soltarlo aquí. Revisa los datos antes de guardar.</div>`}
       <div class="etiqueta-sec" style="padding:18px 36px 6px">Datos</div>
       <div class="form-grupo">
         <div class="campo"><label for="c-nombre" class="oblig">Nombre</label><input id="c-nombre" required maxlength="160" placeholder="Empresa" value="${v('nombre')}"></div>
@@ -1510,10 +1509,12 @@
         }
         aviso('Datos rellenados.' + (ofTxt || ' Elige el oficio.') + ' Revísalos antes de guardar.');
       };
-      el.querySelector('#b-pegar').onclick = () => hojaPegar(aplicar);
-      const fIn = el.querySelector('#b-foto-in');
-      el.querySelector('#b-foto').onclick = () => { if (!enLinea()) return aviso('Sin conexión: el pantallazo necesita internet.', false); fIn.click(); };
-      fIn.onchange = async () => { const f = fIn.files[0]; fIn.value = ''; if (f) await leerConIA({ archivo: f }, aplicar); };
+      el.querySelector('#b-importar').onclick = () => hojaImportar(aplicar);
+      // Soltar un archivo en cualquier parte del formulario de alta
+      const fp = el.querySelector('#f-prov');
+      fp.addEventListener('dragover', (e) => { if ([...(e.dataTransfer.types || [])].includes('Files')) { e.preventDefault(); fp.classList.add('soltando'); } });
+      fp.addEventListener('dragleave', (e) => { if (!fp.contains(e.relatedTarget)) fp.classList.remove('soltando'); });
+      fp.addEventListener('drop', (e) => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (!f) return; e.preventDefault(); fp.classList.remove('soltando'); leerArchivo(f, '', aplicar); });
       const pintarE = () => { el.querySelectorAll('#alta-est [data-n]').forEach((b) => { b.innerHTML = estrella(Number(b.dataset.n) <= st.estrellas ? '#E8A317' : '#E6E1DC', 32); }); el.querySelector('#alta-obra').hidden = !st.estrellas; };
       el.querySelectorAll('#alta-est [data-n]').forEach((b) => b.onclick = () => { const k = Number(b.dataset.n); st.estrellas = st.estrellas === k ? 0 : k; pintarE(); });
     }
@@ -1644,20 +1645,48 @@
     });
   }
 
-  // «Pegar texto»: la IA separa los datos; sin conexión o si falla, se hace sin IA.
-  // En ordenador también se puede pegar aquí una imagen (Ctrl+V) y se lee como pantallazo.
-  function hojaPegar(aplicar) {
-    abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Pegar texto o imagen</div><button class="btn-texto fuerte" id="pg-ok">Rellenar</button></div>
-      <div class="form-grupo" style="margin-top:12px"><div class="campo col"><label for="pg-t">Texto</label><textarea id="pg-t" rows="7" placeholder="Pega aquí un mensaje, una firma de correo, una tarjeta de contacto… o una imagen" autofocus></textarea></div></div>
-      <div class="ayuda">Lo lee la IA. Solo se envía lo que pegues aquí.</div>`, (h) => {
+  // «Importar datos»: una sola hoja para PDF, imagen, foto o texto (pegar, soltar o elegir archivo).
+  const TIPOS_OK = /^(image\/(jpeg|png|webp|gif|heic|heif)|application\/pdf)$/;
+  function leerArchivo(f, texto, aplicar) {
+    if (!TIPOS_OK.test(f.type) && !/\.(pdf|jpe?g|png|webp|gif|heic)$/i.test(f.name)) return aviso('Ese archivo no se puede leer. Usa un PDF o una imagen.', false);
+    if (!enLinea()) return aviso('Sin conexión: leer archivos necesita internet.', false);
+    if (f.size > 5.5 * 1024 * 1024) return aviso('El archivo es demasiado grande (máx. 5 MB).', false);
+    cerrarHoja(); leerConIA({ texto, archivo: f }, aplicar);
+  }
+  function hojaImportar(aplicar) {
+    let pend = null; // archivo elegido, pegado o soltado, a la espera de «Rellenar»
+    abrirHoja(`<div class="hoja-asa"></div><div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Importar datos</div><button class="btn-texto fuerte" id="im-ok">Rellenar</button></div>
+      <div class="im-zona" id="im-zona" tabindex="0">${ico('importar', 30, '#00758D', 2)}
+        <div class="im-z1">Suelta aquí un PDF o una imagen</div>
+        <div class="im-z2">o <button type="button" class="btn-enlace" id="im-elegir">elige un archivo</button> · también puedes pegar (Ctrl+V)</div>
+        <div class="im-arch" id="im-arch" hidden></div>
+        <input type="file" id="im-in" accept="image/*,application/pdf,.pdf" hidden></div>
+      <div class="form-grupo" style="margin-top:12px"><div class="campo col"><label for="im-t">Texto (opcional)</label><textarea id="im-t" rows="5" placeholder="Pega aquí un mensaje, una firma de correo o el texto de un email…"></textarea></div></div>
+      <div class="ayuda">Lo lee la IA. Si añades texto y archivo, los combina (por ejemplo, el cuerpo de un correo y su PDF). Solo se envía lo que pongas aquí.</div>`, (h) => {
       h.querySelector('[data-c]').onclick = cerrarHoja;
-      h.querySelector('#pg-t').addEventListener('paste', (e) => {
-        const it = [...(e.clipboardData && e.clipboardData.items || [])].find((x) => x.type.startsWith('image/'));
-        if (!it) return;
-        e.preventDefault(); const f = it.getAsFile(); cerrarHoja(); leerConIA({ archivo: f }, aplicar);
+      const zona = h.querySelector('#im-zona'); const inp = h.querySelector('#im-in'); const lbl = h.querySelector('#im-arch');
+      const poner = (f) => {
+        if (!f) return;
+        if (!TIPOS_OK.test(f.type) && !/\.(pdf|jpe?g|png|webp|gif|heic)$/i.test(f.name)) return aviso('Ese archivo no se puede leer. Usa un PDF o una imagen.', false);
+        pend = f; lbl.hidden = false;
+        lbl.innerHTML = `${ico(f.type === 'application/pdf' || /\.pdf$/i.test(f.name) ? 'pegar' : 'camara', 16, '#26323A')}<span>${esc(f.name || 'Imagen pegada')}</span><button type="button" class="btn-enlace" id="im-quitar">Quitar</button>`;
+        lbl.querySelector('#im-quitar').onclick = (e) => { e.stopPropagation(); pend = null; lbl.hidden = true; };
+      };
+      h.querySelector('#im-elegir').onclick = (e) => { e.stopPropagation(); inp.click(); };
+      zona.onclick = () => { if (!pend) inp.click(); };
+      inp.onchange = () => { poner(inp.files[0]); inp.value = ''; };
+      zona.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); zona.classList.add('encima'); });
+      zona.addEventListener('dragleave', () => zona.classList.remove('encima'));
+      zona.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); zona.classList.remove('encima'); poner(e.dataTransfer.files && e.dataTransfer.files[0]); });
+      h.addEventListener('paste', (e) => {
+        const it = [...(e.clipboardData && e.clipboardData.items || [])].find((x) => x.kind === 'file');
+        if (!it) return; // texto: se pega normal en la caja
+        e.preventDefault(); poner(it.getAsFile());
       });
-      h.querySelector('#pg-ok').onclick = async () => {
-        const t = h.querySelector('#pg-t').value.trim(); if (!t) return;
+      h.querySelector('#im-ok').onclick = async () => {
+        const t = h.querySelector('#im-t').value.trim();
+        if (pend) return leerArchivo(pend, t, aplicar);
+        if (!t) return aviso('Añade un archivo o pega un texto.', false);
         cerrarHoja();
         if (!enLinea()) { aplicar(sinIA(t)); return; }
         await leerConIA({ texto: t }, aplicar);
@@ -1681,13 +1710,19 @@
     });
   }
 
+  const esPdf = (f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '');
+  function aBase64(f) {
+    return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(new Error('No se puede abrir el archivo')); r.readAsDataURL(f); });
+  }
+
   // Llama a la función «leer-proveedor» de Supabase (la clave de la IA nunca está en la web).
   async function leerConIA({ texto, archivo }, aplicar) {
     abrirHoja(`<div class="hoja-asa"></div><div class="ia-cargando"><div class="ia-puntos"><span></span><span></span><span></span></div>
-      <div class="hoja-titulo">Leyendo ${archivo ? 'el pantallazo' : 'el texto'}…</div><div class="ayuda" style="padding:6px 0 0">Unos segundos.</div></div>`);
+      <div class="hoja-titulo">Leyendo ${archivo ? (esPdf(archivo) ? 'el PDF' : 'la imagen') : 'el texto'}…</div><div class="ayuda" style="padding:6px 0 0">Unos segundos.</div></div>`);
     capa.onclick = null;
     try {
-      const cuerpo = texto ? { texto } : { imagen: await imagenAJpeg(archivo), tipo: 'image/jpeg' };
+      const cuerpo = texto ? { texto } : {};
+      if (archivo) Object.assign(cuerpo, esPdf(archivo) ? { archivo: await aBase64(archivo), tipo: 'application/pdf' } : { archivo: await imagenAJpeg(archivo), tipo: 'image/jpeg' });
       const { data, error } = await sb.functions.invoke('leer-proveedor', { body: cuerpo });
       if (error) {
         let msg = '';
@@ -1698,8 +1733,8 @@
       if (data.quedan !== undefined && data.quedan <= 5) setTimeout(() => aviso(`Te quedan ${data.quedan} lecturas con IA hoy.`, false), 2400);
     } catch (e) {
       cerrarHoja();
-      if (texto) { aplicar(sinIA(texto)); setTimeout(() => aviso((e.message || 'La IA no responde.') + ' Se ha rellenado sin IA.', false), 2400); }
-      else aviso(e.message || 'No se ha podido leer el pantallazo.', false);
+      if (texto && !archivo) { aplicar(sinIA(texto)); setTimeout(() => aviso((e.message || 'La IA no responde.') + ' Se ha rellenado sin IA.', false), 2400); }
+      else aviso(e.message || 'No se ha podido leer el archivo.', false);
     }
   }
   function analizarTexto(t) {

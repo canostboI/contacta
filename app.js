@@ -693,8 +693,8 @@
     el.innerHTML = `
       <header class="cabecera con-foto">
         <div class="dir-titulo">
-          <h1 class="titulo">Directorio de proveedores</h1>
-          <p class="dir-sub">Encuentra y gestiona proveedores del grupo.</p>
+          <h1 class="titulo">Busca tu proveedor</h1>
+          <p class="dir-sub">Busca, llama y comparte contactos y opiniones en un toque</p>
         </div>
         <div class="buscador">
           <div class="caja-busca">${ico('buscar', 20, '#5F6B73', 2.2)}

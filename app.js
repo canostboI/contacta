@@ -223,9 +223,10 @@
       p._lat = g ? g.lat : null; p._lon = g ? g.lon : null; p._muni = g ? g.nombre : '';
       const ofs = (ofsDe.get(p.id) || []).map((id) => of.get(id)).filter(Boolean);
       const vs = (valsDe.get(p.id) || []).sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
-      const media = vs.length ? vs.reduce((s, v) => s + v.estrellas, 0) / vs.length : 0;
+      const conE = vs.filter((v) => v.estrellas); // v1.17.0 — los comentarios sin estrellas no cuentan para la nota ni para «Trabajado»
+      const media = conE.length ? conE.reduce((s, v) => s + v.estrellas, 0) / conE.length : 0;
       const famP = ofs.length ? fam.get(ofs[0].familia_id) : null;
-      p._ofs = ofs; p._vals = vs; p._media = media; p._n = vs.length; p._trab = vs.length > 0;
+      p._ofs = ofs; p._vals = vs; p._media = media; p._n = conE.length; p._ncom = vs.length - conE.length; p._trab = conE.length > 0;
       p._fam = famP ? famP.nombre : '';
       p._wNombre = palabras(p.nombre);
       p._wOf = palabras(ofs.map((o) => o.nombre + ' ' + (o.sinonimos || []).join(' ')).join(' '));
@@ -1142,8 +1143,8 @@
             ${p.sin_verificar ? '<span class="pastilla sinv">Sin verificar</span>' : ''}
           </span>
           <span class="fila-val">
-            ${p._n ? `${estrellas(Math.round(p._media), 16)}<span class="val-num">${p._media.toFixed(1).replace('.', ',')}</span><span class="val-cuantas">(${p._n} valoraci${p._n === 1 ? 'ón' : 'ones'})</span>` : '<span class="val-cuantas">Sin valoraciones</span>'}
-            ${p.eliminado_en ? '' : (() => { const mia = p._vals.find((v) => sesion && v.usuario_id === sesion.user.id); return `<button class="btn-valorar" data-valorar="${p.id}" title="${mia ? 'Cambiar mi valoración' : 'Valorar este proveedor'}">${mia ? `${estrella('#E8A317', 13)} Mi nota: ${mia.estrellas}` : `${ico('mas', 14, '#26323A', 2.4)} Valorar`}</button>`; })()}
+            ${p._n ? `${estrellas(Math.round(p._media), 16)}<span class="val-num">${p._media.toFixed(1).replace('.', ',')}</span><span class="val-cuantas">(${p._n} valoraci${p._n === 1 ? 'ón' : 'ones'})</span>` : `<span class="val-cuantas">Sin valoraciones${p._ncom ? ` · ${p._ncom} comentario${p._ncom === 1 ? '' : 's'}` : ''}</span>`}
+            ${p.eliminado_en ? '' : (() => { const mia = p._vals.find((v) => sesion && v.usuario_id === sesion.user.id); return `<button class="btn-valorar" data-valorar="${p.id}" title="${mia ? 'Cambiar mi valoración' : 'Valorar este proveedor'}">${mia ? (mia.estrellas ? `${estrella('#E8A317', 13)} Mi nota: ${mia.estrellas}` : `${ico('ok', 14, '#26323A', 2.4)} Mi comentario`) : `${ico('mas', 14, '#26323A', 2.4)} Valorar`}</button>`; })()}
           </span>
         </span>
       </div>
@@ -1294,7 +1295,8 @@
         ${p._n ? `<span style="display:flex;align-items:center;gap:4px;font-size:15px;font-weight:600">${estrella('#E8A317', 14)}${p._media.toFixed(1).replace('.', ',')}<span style="font-weight:400;color:var(--sec)">· ${p._n}</span></span>` : ''}</div>
       ${p._n ? `<div class="tarjeta fi-reparto"><div class="fi-media"><b>${media}${estrella('#F2A900', 22)}</b><span>Valoración media</span><small>(${p._n} valoraci${p._n === 1 ? 'ón' : 'ones'})</small></div>
         <div class="fi-barras">${reparto.map((r) => `<div class="fi-barra"><span>${r.k} ${estrella('#F2A900', 12)}</span><i><em style="width:${r.pc}%"></em></i><span>${r.pc} %</span></div>`).join('')}</div></div>
-        <div class="tarjeta" style="margin-top:10px">${p._vals.map((v) => valoracionHTML(v)).join('')}</div>` : `<div class="ayuda" style="padding-top:0">Nadie la ha valorado todavía.</div>`}
+        ` : `<div class="ayuda" style="padding-top:0">Nadie la ha valorado todavía.</div>`}
+      ${p._vals.length ? `<div class="tarjeta" style="margin-top:10px">${p._vals.map((v) => valoracionHTML(v)).join('')}</div>` : ''}
       ${borrado ? '' : `<div style="margin:10px 20px 0"><button class="btn-blanco" id="a-valorar">${ico(mia ? 'ok' : 'mas', 18, '#26323A')}${mia ? 'Cambiar mi valoración' : 'Añadir valoración'}</button></div>`}
       </div></div>
       <div class="pie">Añadido por ${esc(nombreUsuario(p.creado_por, p.creado_por_texto))} · ${fecha(p.created_at)}${p.updated_at && p.updated_at !== p.created_at ? ` · Última edición ${hace(p.updated_at)}` : ''}</div>
@@ -1331,11 +1333,12 @@
     return `<div class="valoracion ${ab ? 'abierta' : ''}" data-v="${v.id}">
       <button aria-expanded="${ab}"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
         <span style="font-size:16px;font-weight:600">${esc(v.obra || nombreUsuario(v.usuario_id))}</span>
-        <span style="font-size:13px;color:var(--sec)">${esc(nombreUsuario(v.usuario_id))}${v.empresa ? ' · ' + esc(v.empresa) : ''} · ${fecha(v.updated_at || v.created_at)}</span></div>
-        ${estrellas(v.estrellas)}<span class="chev-rot">${ico('chev', 16, '#A39A93', 2.2)}</span></button>
+        <span style="font-size:13px;color:var(--sec)">${esc(nombreUsuario(v.usuario_id))}${v.empresa ? ' · ' + esc(v.empresa) : ''} · ${fecha(v.updated_at || v.created_at)}</span>
+        ${v.estrellas ? '' : `<span style="font-size:15px;white-space:normal;text-align:left">${esc(v.comentario || '')}</span>`}</div>
+        ${v.estrellas ? estrellas(v.estrellas) : '<span class="pastilla ref">Comentario</span>'}<span class="chev-rot">${ico('chev', 16, '#A39A93', 2.2)}</span></button>
       <div class="val-det" ${ab ? '' : 'hidden'}>
-        ${v.comentario ? `<div>${esc(v.comentario)}</div>` : '<div style="color:var(--sec)">Sin comentario.</div>'}
-        ${puedo ? `<div><button class="btn-texto btn-peligro" style="padding:0;font-size:14px" data-borrar-val="${v.id}">Borrar valoración</button></div>` : ''}
+        ${!v.estrellas ? '<div style="color:var(--sec)">Comentario sin valorar: no cuenta para la nota.</div>' : v.comentario ? `<div>${esc(v.comentario)}</div>` : '<div style="color:var(--sec)">Sin comentario.</div>'}
+        ${puedo ? `<div><button class="btn-texto btn-peligro" style="padding:0;font-size:14px" data-borrar-val="${v.id}">Borrar ${v.estrellas ? 'valoración' : 'comentario'}</button></div>` : ''}
       </div></div>`;
   }
 
@@ -1393,7 +1396,7 @@
 
   /* --- Valorar --- */
   function hojaValorar(p, mia) {
-    let n = mia ? mia.estrellas : 0;
+    let n = mia ? mia.estrellas || 0 : 0;
     const obras = [...new Set(D.vals.map((v) => (v.obra || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
     abrirHoja(`<div class="hoja-asa"></div>
       <div class="hoja-barra"><button class="btn-texto" data-c>Cancelar</button><div class="hoja-titulo">Valorar</div><button class="btn-texto fuerte" id="v-pub" disabled>Publicar</button></div>
@@ -1404,20 +1407,23 @@
         <div class="campo col"><label for="v-com">Comentario</label><textarea id="v-com" rows="3" maxlength="500" placeholder="¿Qué tal fue? Calidad, plazos, precio…">${esc(mia ? mia.comentario || '' : '')}</textarea></div>
       </div>
       <datalist id="obras-dl">${obras.map((o) => `<option value="${esc(o)}">`).join('')}</datalist>
+      <div class="ayuda">¿No has trabajado con ellos? Deja las estrellas en blanco y escribe solo el comentario: se verá en la ficha pero no contará para la nota.</div>
       <div class="ayuda">Valora el trabajo de la empresa, no a personas. Se publica con tu nombre (${esc(yo ? yo.nombre : '')}) y la fecha de hoy.</div>`, (h) => {
       const pub = h.querySelector('#v-pub');
-      const pintarE = () => { h.querySelectorAll('[data-n]').forEach((b) => { b.innerHTML = estrella(Number(b.dataset.n) <= n ? '#E8A317' : '#E6E1DC', 34); }); pub.disabled = !n; };
-      h.querySelectorAll('[data-n]').forEach((b) => b.onclick = () => { n = Number(b.dataset.n); pintarE(); });
+      const com = h.querySelector('#v-com');
+      const pintarE = () => { h.querySelectorAll('[data-n]').forEach((b) => { b.innerHTML = estrella(Number(b.dataset.n) <= n ? '#E8A317' : '#E6E1DC', 34); }); pub.disabled = !n && !com.value.trim(); };
+      h.querySelectorAll('[data-n]').forEach((b) => b.onclick = () => { const k = Number(b.dataset.n); n = n === k ? 0 : k; pintarE(); }); // tocar la misma estrella la quita
+      com.oninput = pintarE;
       pintarE();
       h.querySelector('[data-c]').onclick = cerrarHoja;
       pub.onclick = async () => {
         if (!enLinea()) return aviso('Sin conexión', false);
         pub.disabled = true;
-        const fila = { proveedor_id: p.id, usuario_id: sesion.user.id, estrellas: n, obra: h.querySelector('#v-obra').value.trim() || null, comentario: h.querySelector('#v-com').value.trim() || null };
+        const fila = { proveedor_id: p.id, usuario_id: sesion.user.id, estrellas: n || null, obra: h.querySelector('#v-obra').value.trim() || null, comentario: h.querySelector('#v-com').value.trim() || null };
         const { error } = mia ? await sb.from('valoraciones').update({ estrellas: fila.estrellas, obra: fila.obra, comentario: fila.comentario }).eq('id', mia.id)
           : await sb.from('valoraciones').insert(fila);
         if (error) { pub.disabled = false; return aviso('No se ha podido guardar: ' + error.message, false); }
-        cerrarHoja(); aviso('Valoración publicada'); await cargarDatos(); pintar();
+        cerrarHoja(); aviso(n ? 'Valoración publicada' : 'Comentario publicado'); await cargarDatos(); pintar();
       };
     });
   }
@@ -1861,7 +1867,7 @@
       z.innerHTML = `<div class="seccion"><span class="etiqueta-sec">Últimos cambios</span></div><div class="tarjeta">${filas.map((h) => {
         const reg = h.despues || h.antes || {}; let que = '';
         if (h.tabla === 'proveedores') que = `«${esc(reg.nombre)}»`;
-        else if (h.tabla === 'valoraciones') que = `una valoración (${reg.estrellas}★) de «${esc((IDX.porId.get(reg.proveedor_id) || {}).nombre || 'proveedor')}»`;
+        else if (h.tabla === 'valoraciones') que = `${reg.estrellas ? `una valoración (${reg.estrellas}★)` : 'un comentario'} de «${esc((IDX.porId.get(reg.proveedor_id) || {}).nombre || 'proveedor')}»`;
         else if (h.tabla === 'proveedor_oficios') que = `${h.accion === 'insert' ? 'el oficio' : 'el oficio'} ${esc((IDX.of.get(reg.oficio_id) || {}).nombre || '')} de «${esc((IDX.porId.get(reg.proveedor_id) || {}).nombre || '')}»`;
         else if (h.tabla === 'oficios') que = `el oficio «${esc(reg.nombre)}»`;
         const v = h.tabla === 'proveedor_oficios' ? (h.accion === 'insert' ? 'añadió' : 'quitó') : verbo[h.accion] || h.accion;

@@ -844,3 +844,11 @@ a.dato-ico.ico-accion:active { transform: scale(.92); }
 .accion .acc-txt { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
 .accion .acc-num { font-size: 11px; font-weight: 500; opacity: .9; white-space: nowrap; letter-spacing: -.1px; margin-top: 1px; }
 @media (min-width: 1100px) { .accion .acc-txt { align-items: flex-start; } }
+
+/* =====================================================================
+   v1.17.4 — Ficha: «WhatsApp» y «Correo» también enseñan a qué número o correo van
+   (un correo largo se corta con «…»)
+   ===================================================================== */
+.accion { min-width: 0; }
+.accion .acc-txt { min-width: 0; max-width: 100%; }
+.accion .acc-num { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }

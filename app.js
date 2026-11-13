@@ -1252,11 +1252,14 @@
     const famN = p._fam; const moviles = partes(p.moviles); const fijos = partes(p.fijos); const emails = partes(p.emails);
     const telf = moviles[0] || fijos[0]; const mia = p._vals.find((v) => sesion && v.usuario_id === sesion.user.id);
     const datos = [];
-    const conIco = (n, html) => html.replace('<div class="dato">', `<div class="dato con-ico"><span class="dato-ico ico-${n}">${ico(n, 18, 'currentColor', 1.9)}</span>`);
+    // Con enlace, el icono de color también es un botón (llamar a ESE número / escribir a ESE correo)
+    const conIco = (n, html, href, txt) => html.replace('<div class="dato">', href
+      ? `<div class="dato con-ico"><a class="dato-ico ico-${n} ico-accion" href="${esc(href)}" aria-label="${esc(txt)}" title="${esc(txt)}">${ico(n, 18, 'currentColor', 1.9)}</a>`
+      : `<div class="dato con-ico"><span class="dato-ico ico-${n}">${ico(n, 18, 'currentColor', 1.9)}</span>`);
     if (p.personas) datos.push(`<div class="dato con-ico"><span class="dato-ico ico-contacto">${ico('contacto', 18, 'currentColor', 1.9)}</span><div class="dato-txt"><span class="k">Persona de contacto</span><span class="v">${esc(p.personas)}</span></div></div>`);
-    moviles.forEach((t) => datos.push(conIco('tel', datoCopiable('Móvil', telBonito(t), `tel:${telLink(t)}`))));
-    fijos.forEach((t) => datos.push(conIco('tel', datoCopiable('Teléfono fijo', telBonito(t), `tel:${telLink(t)}`))));
-    emails.forEach((m) => datos.push(conIco('correo', datoCopiable('Correo', m, `mailto:${m}`))));
+    moviles.forEach((t) => datos.push(conIco('tel', datoCopiable('Móvil', telBonito(t), `tel:${telLink(t)}`), `tel:${telLink(t)}`, 'Llamar al ' + telBonito(t))));
+    fijos.forEach((t) => datos.push(conIco('tel', datoCopiable('Teléfono fijo', telBonito(t), `tel:${telLink(t)}`), `tel:${telLink(t)}`, 'Llamar al ' + telBonito(t))));
+    emails.forEach((m) => datos.push(conIco('correo', datoCopiable('Correo', m, `mailto:${m}`), `mailto:${m}`, 'Escribir a ' + m)));
     if (p.web) datos.push(`<div class="dato"><div class="dato-txt"><span class="k">Web</span><a class="v" href="${esc(/^https?:/i.test(p.web) ? p.web : 'https://' + p.web)}" target="_blank" rel="noopener">${esc(p.web.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, ''))}</a></div>${ico('web', 18, '#A39A93', 1.8)}</div>`);
     if (p.poblacion || p.provincia) datos.push(`<div class="dato con-ico"><span class="dato-ico ico-pin">${ico('pin', 18, 'currentColor', 1.9)}</span><div class="dato-txt"><span class="k">Población</span><span class="v">${esc([p.poblacion, p.provincia].filter(Boolean).join(' · '))}</span></div></div>`);
     if (p.cif) datos.push(datoCopiable('CIF', p.cif));

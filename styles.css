@@ -826,3 +826,14 @@ body.con-menu #menu { display: flex; flex-direction: column; position: fixed; to
 @media (max-width: 380px) {
   #barra .b-logo img { height: 22px; }
 }
+
+/* =====================================================================
+   v1.17.2 — Ficha: el icono verde de cada teléfono llama a ese número
+   (y el del correo escribe a ese correo); el número también se ve pulsable
+   ===================================================================== */
+a.dato-ico.ico-accion { text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; box-shadow: inset 0 0 0 1px rgba(47, 122, 62, .25); }
+a.dato-ico.ico-tel.ico-accion { background: #2F7A3E; color: #fff; }
+a.dato-ico.ico-correo.ico-accion { box-shadow: inset 0 0 0 1px rgba(0, 117, 141, .25); }
+a.dato-ico.ico-accion:active { transform: scale(.92); }
+@media (hover: hover) { a.dato-ico.ico-accion:hover { transform: scale(1.06); } }
+.dato.con-ico a.v[href^="tel:"], .dato.con-ico a.v[href^="mailto:"] { color: var(--tinta-fuerte); text-decoration: none; }

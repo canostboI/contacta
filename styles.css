@@ -811,3 +811,18 @@ body.con-menu #menu { display: flex; flex-direction: column; position: fixed; to
 .btn-enlace { border: 0; background: none; padding: 0; color: var(--acento); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
 .im-arch { margin-top: 6px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border: 1px solid var(--linea); border-radius: 999px; font-size: 14px; max-width: 100%; }
 .im-arch span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* =====================================================================
+   v1.17.1 — Móvil: los logos de empresa de la barra se encogen hasta caber
+   (en pantallas de ~360 px se montaban sobre «Contacta» y debajo del «+»)
+   ===================================================================== */
+@media (max-width: 699px) {
+  #barra .logos-mini { justify-self: stretch; justify-content: center; min-width: 0; gap: 8px; padding: 0 4px; overflow: hidden; }
+  #barra .logos-mini img { flex: 0 1 auto; min-width: 0; height: auto; object-fit: contain; }
+  #barra .logos-mini img[alt="Bosch Pascual"] { max-height: 8px; }
+  #barra .logos-mini img[alt="RECOP"] { max-height: 12px; }
+  #barra .logos-mini img[alt="Munné"] { max-height: 10px; }
+}
+@media (max-width: 380px) {
+  #barra .b-logo img { height: 22px; }
+}

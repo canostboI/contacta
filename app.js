@@ -1282,7 +1282,7 @@
         ${p._n ? `<div class="fi-nota"><b>${media}${estrella('#F2A900', 26)}</b><span>Valoración media</span><small>(${p._n} valoraci${p._n === 1 ? 'ón' : 'ones'})</small></div>` : ''}
       </div>
       <div class="acciones">
-        <a class="accion rojo" ${telf ? `href="tel:${esc(telLink(telf))}"` : 'aria-disabled="true"'}><span class="acc-ico">${ico('tel', 20, '#fff')}</span>Llamar</a>
+        <a class="accion rojo" ${telf ? `href="tel:${esc(telLink(telf))}" aria-label="Llamar al ${esc(telBonito(telf))}"` : 'aria-disabled="true"'}><span class="acc-ico">${ico('tel', 20, '#fff')}</span><span class="acc-txt">Llamar${telf ? `<small class="acc-num">${esc(telBonito(telf).replace(/^\+34 /, ''))}</small>` : ''}</span></a>
         <a class="accion" ${moviles[0] ? `href="https://wa.me/${telLink(moviles[0]).replace('+', '')}" target="_blank" rel="noopener"` : 'aria-disabled="true"'}><span class="acc-ico" style="background:#E3F5EA">${ico('wa', 20, '#1E8E4E')}</span>WhatsApp</a>
         <a class="accion" ${emails[0] ? `href="mailto:${esc(emails[0])}"` : 'aria-disabled="true"'}><span class="acc-ico" style="background:#E3F8FA">${ico('correo', 20, '#00758D')}</span>Correo</a>
         <button class="accion" id="a-copiar"><span class="acc-ico" style="background:#F3F5D9">${ico('copiar', 20, '#7E8A12')}</span><span>Copiar</span></button>
